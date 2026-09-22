@@ -1,0 +1,88 @@
+:root {
+  /* Default: Dark Modern + Electric Blue */
+  --bg-main: #0D0F14;
+  --bg-card: #151821;
+  --bg-card-hover: #1E2433;
+  --border-subtle: #1F2430;
+  --text-primary: #F3F4F6;
+  --text-secondary: #9CA3AF;
+  --text-muted: #6B7280;
+
+  --primary: #3B82F6;
+  --primary-hover: #2563EB;
+  --glow: #60A5FA;
+  --glow-shadow: rgba(59, 130, 246, 0.35);
+
+  --favorite-yellow: #FACC15;
+  --live-red: #EF4444;
+
+  --card-width: 180px;
+  --card-height: 130px;
+}
+
+/* Theme Classes */
+body[data-theme="DARK"] {
+  --bg-main: #0D0F14;
+  --bg-card: #151821;
+  --bg-card-hover: #1E2433;
+  --border-subtle: #1F2430;
+}
+
+body[data-theme="OLED_BLACK"] {
+  --bg-main: #000000;
+  --bg-card: #0F0F11;
+  --bg-card-hover: #1A1A1E;
+  --border-subtle: #222226;
+}
+
+body[data-theme="BLUE"] {
+  --bg-main: #0A1124;
+  --bg-card: #111C38;
+  --bg-card-hover: #1E2E56;
+  --border-subtle: #1D2A4D;
+}
+
+/* Accent Color Classes */
+body[data-accent="BLUE"] {
+  --primary: #3B82F6;
+  --primary-hover: #2563EB;
+  --glow: #60A5FA;
+  --glow-shadow: rgba(59, 130, 246, 0.4);
+}
+
+body[data-accent="PURPLE"] {
+  --primary: #8B5CF6;
+  --primary-hover: #7C3AED;
+  --glow: #A78BFA;
+  --glow-shadow: rgba(139, 92, 246, 0.4);
+}
+
+body[data-accent="GREEN"] {
+  --primary: #10B981;
+  --primary-hover: #059669;
+  --glow: #34D399;
+  --glow-shadow: rgba(16, 185, 129, 0.4);
+}
+
+body[data-accent="RED"] {
+  --primary: #EF4444;
+  --primary-hover: #DC2626;
+  --glow: #F87171;
+  --glow-shadow: rgba(239, 68, 68, 0.4);
+}
+
+/* Card Size Modes */
+body[data-card-size="COMPACT"] {
+  --card-width: 150px;
+  --card-height: 110px;
+}
+
+body[data-card-size="NORMAL"] {
+  --card-width: 180px;
+  --card-height: 130px;
+}
+
+body[data-card-size="LARGE"] {
+  --card-width: 215px;
+  --card-height: 150px;
+}
