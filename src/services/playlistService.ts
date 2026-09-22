@@ -1,6 +1,6 @@
-﻿import { Channel, Playlist } from '../models/types';
+import { Channel, Playlist } from '../models/types';
 import { M3uParser } from './m3uParser';
-import { SAMPLE_M3U_CONTENT } from './sampleData';
+import { DEFAULT_MANA_TV_URL, DEFAULT_MANA_TV_NAME, SAMPLE_M3U_CONTENT } from './sampleData';
 import { StorageService } from './storageService';
 
 export class PlaylistService {
@@ -30,7 +30,7 @@ export class PlaylistService {
           const resp = await fetch(proxyUrl);
           if (resp.ok) {
             content = await resp.text();
-            if (content && content.includes('#EXTINF')) {
+            if (content && (content.includes('#EXTINF') || content.includes('#EXTM3U'))) {
               break;
             }
           }
@@ -41,10 +41,10 @@ export class PlaylistService {
     }
 
     if (!content || (!content.includes('#EXTINF') && !content.includes('#EXTM3U'))) {
-      throw new Error('Could not download or parse valid M3U playlist from the provided URL. Please verify the URL or try uploading the file directly.');
+      throw new Error('Could not download or parse valid M3U playlist from the provided URL. Please check connection.');
     }
 
-    const playlistId = `pl_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+    const playlistId = 'pl_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
     const channels = M3uParser.parse(content, playlistId);
 
     if (channels.length === 0) {
@@ -70,7 +70,7 @@ export class PlaylistService {
   }
 
   public static async loadFromContent(name: string, content: string, sourceType: 'file' | 'sample'): Promise<{ playlist: Playlist; channels: Channel[] }> {
-    const playlistId = `pl_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+    const playlistId = 'pl_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
     const channels = M3uParser.parse(content, playlistId);
 
     if (channels.length === 0) {
@@ -94,8 +94,17 @@ export class PlaylistService {
     return { playlist, channels };
   }
 
+  public static async loadDefaultManaTvPlaylist(): Promise<{ playlist: Playlist; channels: Channel[] }> {
+    try {
+      return await this.loadFromUrl(DEFAULT_MANA_TV_NAME, DEFAULT_MANA_TV_URL);
+    } catch (e) {
+      console.warn('Failed to load online Mana TV M3U, falling back to local seed:', e);
+      return await this.loadFromContent(DEFAULT_MANA_TV_NAME, SAMPLE_M3U_CONTENT, 'sample');
+    }
+  }
+
   public static async loadSamplePlaylist(): Promise<{ playlist: Playlist; channels: Channel[] }> {
-    return this.loadFromContent('Sample Demo Playlist', SAMPLE_M3U_CONTENT, 'sample');
+    return this.loadDefaultManaTvPlaylist();
   }
 
   public static async refreshPlaylist(playlistId: string): Promise<Channel[]> {

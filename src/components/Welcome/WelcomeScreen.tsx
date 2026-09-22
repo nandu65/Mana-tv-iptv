@@ -1,5 +1,5 @@
-﻿import React, { useEffect, useRef } from 'react';
-import { Plus, Sparkles, Volume2, VolumeX } from 'lucide-react';
+import React, { useEffect, useRef } from 'react';
+import { Plus, Tv, Volume2, VolumeX } from 'lucide-react';
 import { AudioService } from '../../services/audioService';
 
 interface WelcomeScreenProps {
@@ -7,23 +7,23 @@ interface WelcomeScreenProps {
   onLoadSample: () => void;
   welcomeAudioVolume: number;
   welcomeAudioEnabled: boolean;
+  isLoadingDefault?: boolean;
 }
 
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   onOpenAddPlaylist,
   onLoadSample,
   welcomeAudioVolume,
-  welcomeAudioEnabled
+  welcomeAudioEnabled,
+  isLoadingDefault = false
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    // Play muted video background
     if (videoRef.current) {
       videoRef.current.play().catch(e => console.warn('Video playback notice:', e));
     }
 
-    // Play welcome audio if enabled
     if (welcomeAudioEnabled && welcomeAudioVolume > 0) {
       AudioService.playWelcomeAudio('/assets/welcome_audio.mp3', welcomeAudioVolume);
     }
@@ -44,7 +44,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
       alignItems: 'center',
       justifyContent: 'center'
     }}>
-      {/* 16:9 Video Background (Fitted without stretching) */}
+      {/* 16:9 Video Background */}
       <video
         ref={videoRef}
         src="/assets/welcome_video.mp4"
@@ -59,7 +59,6 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
         }}
       />
 
-      {/* Subtle Vignette and Gradient Overlay */}
       <div style={{
         position: 'absolute',
         inset: 0,
@@ -67,7 +66,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
         pointerEvents: 'none'
       }} />
 
-      {/* Mana TV Watermark & Branding Top Right */}
+      {/* Mana TV Logo */}
       <div style={{
         position: 'absolute',
         top: '24px',
@@ -81,16 +80,14 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           src="/assets/app_logo.png"
           alt="Mana TV"
           style={{ height: '40px', width: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.6))' }}
-          onError={(e) => {
-            (e.target as HTMLElement).style.display = 'none';
-          }}
+          onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
         />
         <span style={{ fontSize: '20px', fontWeight: 800, letterSpacing: '0.5px', color: '#fff' }}>
           Mana TV
         </span>
       </div>
 
-      {/* Audio Status Indicator */}
+      {/* Audio Status */}
       <div style={{
         position: 'absolute',
         top: '24px',
@@ -120,7 +117,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
         )}
       </div>
 
-      {/* Action Overlay Bottom Center */}
+      {/* Action Overlay */}
       <div style={{
         position: 'absolute',
         bottom: '48px',
@@ -139,9 +136,10 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           flexWrap: 'wrap',
           justifyContent: 'center'
         }}>
-          {/* Add M3U Button */}
+          {/* Watch Mana TV Default Playlist Button */}
           <button
-            onClick={onOpenAddPlaylist}
+            onClick={onLoadSample}
+            disabled={isLoadingDefault}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -157,20 +155,16 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
               transition: 'transform 0.15s ease, box-shadow 0.15s ease',
               cursor: 'pointer'
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'scale(1.06)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'scale(1.0)';
-            }}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.06)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1.0)'; }}
           >
-            <Plus size={22} />
-            <span>Add M3U Playlist</span>
+            <Tv size={22} />
+            <span>{isLoadingDefault ? 'Loading Mana TV Channels...' : 'Open Mana TV Playlist'}</span>
           </button>
 
-          {/* Try Sample Demo Button */}
+          {/* Add Custom M3U Button */}
           <button
-            onClick={onLoadSample}
+            onClick={onOpenAddPlaylist}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -197,8 +191,8 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
               e.currentTarget.style.backgroundColor = 'rgba(17, 24, 39, 0.85)';
             }}
           >
-            <Sparkles size={22} color="var(--glow)" />
-            <span>Try Sample Demo</span>
+            <Plus size={22} color="var(--glow)" />
+            <span>Add Custom M3U</span>
           </button>
         </div>
 
@@ -208,7 +202,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           letterSpacing: '0.3px',
           textShadow: '0 2px 4px rgba(0,0,0,0.8)'
         }}>
-          Mana TV • Live Streams • Ultra Low Latency • Custom Playlists
+          Mana TV • https://iptv-org.github.io/iptv/index.m3u • Live Streaming
         </p>
       </div>
     </div>

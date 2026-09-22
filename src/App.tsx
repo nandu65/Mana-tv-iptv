@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Channel, UserAccount } from './models/types';
 import { useUiPreferences } from './hooks/useUiPreferences';
 import { usePlaylists } from './hooks/usePlaylists';
@@ -60,6 +60,18 @@ export const App: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
+  // Auto-seed default Mana TV playlist on initial startup if empty
+  useEffect(() => {
+    const currentPlaylists = StorageService.getPlaylists();
+    if (currentPlaylists.length === 0) {
+      loadSample().then(() => {
+        updatePreferences({ isFirstRunCompleted: true });
+      }).catch(e => {
+        console.warn('Auto-seed Mana TV default playlist notice:', e);
+      });
+    }
+  }, []);
+
   const showWelcome = !preferences.isFirstRunCompleted && playlists.length === 0;
 
   const handlePlayChannel = (channel: Channel) => {
@@ -67,12 +79,12 @@ export const App: React.FC = () => {
     recordWatched(channel);
   };
 
-  const handleLoadSample = async () => {
+  const handleLoadDefaultManaTv = async () => {
     try {
       await loadSample();
       updatePreferences({ isFirstRunCompleted: true });
     } catch (e) {
-      console.error('Failed to load sample demo:', e);
+      console.error('Failed to load default Mana TV playlist:', e);
     }
   };
 
@@ -102,6 +114,8 @@ export const App: React.FC = () => {
     const updatedPlaylists = StorageService.getPlaylists();
     if (updatedPlaylists.length > 0) {
       selectPlaylist(updatedPlaylists[0].id);
+    } else {
+      loadSample();
     }
     refreshHiddenState();
     refreshRecentlyWatched();
@@ -112,7 +126,11 @@ export const App: React.FC = () => {
     setCurrentUser(null);
     StorageService.setScope('guest');
     const guestPlaylists = StorageService.getPlaylists();
-    selectPlaylist(guestPlaylists.length > 0 ? guestPlaylists[0].id : '');
+    if (guestPlaylists.length > 0) {
+      selectPlaylist(guestPlaylists[0].id);
+    } else {
+      loadSample();
+    }
     refreshHiddenState();
     refreshRecentlyWatched();
   };
@@ -143,9 +161,10 @@ export const App: React.FC = () => {
       {showWelcome ? (
         <WelcomeScreen
           onOpenAddPlaylist={() => setIsAddModalOpen(true)}
-          onLoadSample={handleLoadSample}
+          onLoadSample={handleLoadDefaultManaTv}
           welcomeAudioVolume={preferences.welcomeAudioVolume}
           welcomeAudioEnabled={preferences.welcomeAudioEnabled}
+          isLoadingDefault={isPlaylistLoading}
         />
       ) : (
         <>
@@ -184,12 +203,13 @@ export const App: React.FC = () => {
               onToggleFavorite={toggleFavorite}
               onHideChannel={hideChannel}
               onOpenAddPlaylist={() => setIsAddModalOpen(true)}
-              onLoadSample={handleLoadSample}
+              onLoadSample={handleLoadDefaultManaTv}
             />
           </div>
         </>
       )}
 
+      {/* Video Player Overlay */}
       {activeChannel && (
         <VideoPlayer
           channel={activeChannel}
@@ -200,6 +220,7 @@ export const App: React.FC = () => {
         />
       )}
 
+      {/* Settings Modal */}
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => {
@@ -216,7 +237,7 @@ export const App: React.FC = () => {
         onDeletePlaylist={deletePlaylist}
         onRefreshPlaylist={refreshPlaylist}
         onOpenAddPlaylist={() => setIsAddModalOpen(true)}
-        onLoadSample={handleLoadSample}
+        onLoadSample={handleLoadDefaultManaTv}
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
         onLogout={handleLogout}
         onDataCleared={() => {
@@ -226,6 +247,7 @@ export const App: React.FC = () => {
         }}
       />
 
+      {/* Add Playlist Modal */}
       <AddPlaylistModal
         isOpen={isAddModalOpen}
         isLoading={isPlaylistLoading}
@@ -233,9 +255,10 @@ export const App: React.FC = () => {
         onClose={() => setIsAddModalOpen(false)}
         onSubmitUrl={handleAddUrl}
         onSubmitFile={handleAddFile}
-        onLoadSample={handleLoadSample}
+        onLoadSample={handleLoadDefaultManaTv}
       />
 
+      {/* Authentication Modal */}
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}

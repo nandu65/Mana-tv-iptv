@@ -1,4 +1,7 @@
-﻿export const SAMPLE_M3U_CONTENT = `#EXTM3U
+export const DEFAULT_MANA_TV_URL = 'https://iptv-org.github.io/iptv/index.m3u';
+export const DEFAULT_MANA_TV_NAME = 'Mana TV';
+
+export const SAMPLE_M3U_CONTENT = `#EXTM3U
 #EXTINF:-1 tvg-id="bbb.hls" tvg-name="Big Buck Bunny 1080p (HLS)" tvg-logo="https://upload.wikimedia.org/wikipedia/commons/c/c5/Big_buck_bunny_poster_big.jpg" group-title="Animation" tvg-country="US" tvg-language="eng" tvg-chno="1",Big Buck Bunny (HLS Live)
 https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8
 
