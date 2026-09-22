@@ -516,183 +516,206 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           </div>
         </div>
 
-        {/* Bottom bar */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <button
-              onClick={togglePlay}
-              style={{
-                width: '44px',
-                height: '44px',
-                borderRadius: '50%',
-                background: 'var(--primary)',
-                color: '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 4px 16px var(--glow-shadow)'
-              }}
-            >
-              {isPlaying ? <Pause size={20} /> : <Play size={20} style={{ marginLeft: '2px' }} />}
-            </button>
+        {/* Bottom bar: ALL CONTROLS GROUPED ON THE LEFT BESIDE VOLUME (avoiding bottom-right Netlify badge) */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-start',
+          gap: '12px',
+          flexWrap: 'wrap'
+        }}>
+          {/* Play / Pause */}
+          <button
+            onClick={togglePlay}
+            style={{
+              width: '44px',
+              height: '44px',
+              borderRadius: '50%',
+              background: 'var(--primary)',
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 4px 16px var(--glow-shadow)',
+              flexShrink: 0
+            }}
+          >
+            {isPlaying ? <Pause size={20} /> : <Play size={20} style={{ marginLeft: '2px' }} />}
+          </button>
 
-            <button
-              onClick={toggleMute}
-              style={{
-                width: '38px',
-                height: '38px',
-                borderRadius: '8px',
-                background: 'rgba(255,255,255,0.12)',
-                color: '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
-            </button>
+          {/* Mute */}
+          <button
+            onClick={toggleMute}
+            style={{
+              width: '38px',
+              height: '38px',
+              borderRadius: '8px',
+              background: 'rgba(255,255,255,0.12)',
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}
+          >
+            {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+          </button>
 
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.05"
-              value={isMuted ? 0 : volume}
-              onChange={(e) => {
-                const val = parseFloat(e.target.value);
-                setVolume(val);
-                if (videoRef.current) {
-                  videoRef.current.volume = val;
-                  videoRef.current.muted = false;
-                  setIsMuted(false);
-                }
-              }}
-              style={{ width: '90px', accentColor: 'var(--glow)', cursor: 'pointer' }}
-            />
-          </div>
+          {/* Volume slider */}
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value={isMuted ? 0 : volume}
+            onChange={(e) => {
+              const val = parseFloat(e.target.value);
+              setVolume(val);
+              if (videoRef.current) {
+                videoRef.current.volume = val;
+                videoRef.current.muted = false;
+                setIsMuted(false);
+              }
+            }}
+            style={{ width: '85px', accentColor: 'var(--glow)', cursor: 'pointer', flexShrink: 0 }}
+          />
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* Vertical divider */}
+          <div style={{ width: '1px', height: '22px', background: 'rgba(255,255,255,0.2)', margin: '0 2px', flexShrink: 0 }} />
+
+          {/* Stream Info HUD Toggle */}
+          <button
+            onClick={() => setShowInfo(!showInfo)}
+            title="Stream Info (I)"
+            style={{
+              padding: '8px 12px',
+              borderRadius: '8px',
+              background: showInfo ? 'var(--primary)' : 'rgba(255,255,255,0.12)',
+              color: '#fff',
+              fontSize: '12px',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              flexShrink: 0
+            }}
+          >
+            <Info size={15} />
+            <span>Info</span>
+          </button>
+
+          {/* Quality Selector */}
+          {qualities.length > 0 && (
             <button
-              onClick={() => setShowInfo(!showInfo)}
-              title="Stream Info (I)"
+              onClick={() => setShowQualityMenu(!showQualityMenu)}
               style={{
                 padding: '8px 12px',
                 borderRadius: '8px',
-                background: showInfo ? 'var(--primary)' : 'rgba(255,255,255,0.12)',
+                background: showQualityMenu ? 'var(--primary)' : 'rgba(255,255,255,0.12)',
                 color: '#fff',
                 fontSize: '12px',
                 fontWeight: 600,
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px'
+                gap: '6px',
+                flexShrink: 0
               }}
             >
-              <Info size={15} />
-              <span>Info</span>
+              <Layers size={15} />
+              <span>{selectedQuality === -1 ? 'Auto' : qualities[selectedQuality]?.label || 'Quality'}</span>
             </button>
+          )}
 
-            {qualities.length > 0 && (
-              <button
-                onClick={() => setShowQualityMenu(!showQualityMenu)}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  background: showQualityMenu ? 'var(--primary)' : 'rgba(255,255,255,0.12)',
-                  color: '#fff',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
-              >
-                <Layers size={15} />
-                <span>{selectedQuality === -1 ? 'Auto' : qualities[selectedQuality]?.label || 'Quality'}</span>
-              </button>
-            )}
-
-            {audioTracks.length > 1 && (
-              <button
-                onClick={() => setShowAudioMenu(!showAudioMenu)}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  background: showAudioMenu ? 'var(--primary)' : 'rgba(255,255,255,0.12)',
-                  color: '#fff',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
-              >
-                <Volume2 size={15} />
-                <span>{audioTracks[selectedAudio]?.label || 'Audio'}</span>
-              </button>
-            )}
-
-            {subtitleTracks.length > 0 && (
-              <button
-                onClick={() => setShowSubMenu(!showSubMenu)}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  background: showSubMenu ? 'var(--primary)' : 'rgba(255,255,255,0.12)',
-                  color: '#fff',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
-              >
-                <Subtitles size={15} />
-                <span>{selectedSubtitle === -1 ? 'Subs Off' : subtitleTracks[selectedSubtitle]?.label || 'Subs'}</span>
-              </button>
-            )}
-
+          {/* Audio Tracks */}
+          {audioTracks.length > 1 && (
             <button
-              onClick={() => setShowAspectMenu(!showAspectMenu)}
+              onClick={() => setShowAudioMenu(!showAudioMenu)}
               style={{
                 padding: '8px 12px',
                 borderRadius: '8px',
-                background: showAspectMenu ? 'var(--primary)' : 'rgba(255,255,255,0.12)',
+                background: showAudioMenu ? 'var(--primary)' : 'rgba(255,255,255,0.12)',
                 color: '#fff',
                 fontSize: '12px',
                 fontWeight: 600,
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px'
+                gap: '6px',
+                flexShrink: 0
               }}
             >
-              <RotateCw size={15} />
-              <span>{aspectRatio}</span>
+              <Volume2 size={15} />
+              <span>{audioTracks[selectedAudio]?.label || 'Audio'}</span>
             </button>
+          )}
 
+          {/* Subtitles */}
+          {subtitleTracks.length > 0 && (
             <button
-              onClick={toggleFullscreen}
+              onClick={() => setShowSubMenu(!showSubMenu)}
               style={{
-                width: '38px',
-                height: '38px',
+                padding: '8px 12px',
                 borderRadius: '8px',
-                background: 'rgba(255,255,255,0.12)',
+                background: showSubMenu ? 'var(--primary)' : 'rgba(255,255,255,0.12)',
                 color: '#fff',
+                fontSize: '12px',
+                fontWeight: 600,
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                gap: '6px',
+                flexShrink: 0
               }}
             >
-              {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
+              <Subtitles size={15} />
+              <span>{selectedSubtitle === -1 ? 'Subs Off' : subtitleTracks[selectedSubtitle]?.label || 'Subs'}</span>
             </button>
-          </div>
+          )}
+
+          {/* Aspect Ratio */}
+          <button
+            onClick={() => setShowAspectMenu(!showAspectMenu)}
+            style={{
+              padding: '8px 12px',
+              borderRadius: '8px',
+              background: showAspectMenu ? 'var(--primary)' : 'rgba(255,255,255,0.12)',
+              color: '#fff',
+              fontSize: '12px',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              flexShrink: 0
+            }}
+          >
+            <RotateCw size={15} />
+            <span>{aspectRatio}</span>
+          </button>
+
+          {/* Fullscreen */}
+          <button
+            onClick={toggleFullscreen}
+            style={{
+              width: '38px',
+              height: '38px',
+              borderRadius: '8px',
+              background: 'rgba(255,255,255,0.12)',
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}
+          >
+            {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
+          </button>
         </div>
       </div>
 
+      {/* Stream Info HUD Overlay */}
       {showInfo && (
         <div style={{
           position: 'absolute',
           top: '80px',
-          right: '24px',
+          left: '24px',
           width: '280px',
           background: 'rgba(15, 20, 30, 0.95)',
           backdropFilter: 'blur(16px)',
@@ -732,11 +755,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </div>
       )}
 
+      {/* Aspect Ratio Menu Popup (Anchored on Left) */}
       {showAspectMenu && (
         <div style={{
           position: 'absolute',
           bottom: '80px',
-          right: '80px',
+          left: '360px',
           background: 'rgba(15, 20, 30, 0.95)',
           backdropFilter: 'blur(16px)',
           border: '1px solid rgba(255, 255, 255, 0.15)',
@@ -774,11 +798,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </div>
       )}
 
+      {/* Quality Menu Popup (Anchored on Left) */}
       {showQualityMenu && (
         <div style={{
           position: 'absolute',
           bottom: '80px',
-          right: '160px',
+          left: '260px',
           background: 'rgba(15, 20, 30, 0.95)',
           backdropFilter: 'blur(16px)',
           border: '1px solid rgba(255, 255, 255, 0.15)',
@@ -827,11 +852,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </div>
       )}
 
+      {/* Audio Menu Popup (Anchored on Left) */}
       {showAudioMenu && (
         <div style={{
           position: 'absolute',
           bottom: '80px',
-          right: '200px',
+          left: '300px',
           background: 'rgba(15, 20, 30, 0.95)',
           backdropFilter: 'blur(16px)',
           border: '1px solid rgba(255, 255, 255, 0.15)',
@@ -866,11 +892,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </div>
       )}
 
+      {/* Subtitles Menu Popup (Anchored on Left) */}
       {showSubMenu && (
         <div style={{
           position: 'absolute',
           bottom: '80px',
-          right: '240px',
+          left: '340px',
           background: 'rgba(15, 20, 30, 0.95)',
           backdropFilter: 'blur(16px)',
           border: '1px solid rgba(255, 255, 255, 0.15)',
@@ -919,6 +946,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </div>
       )}
 
+      {/* Quick Channel Drawer */}
       {showDrawer && (
         <div style={{
           position: 'absolute',
