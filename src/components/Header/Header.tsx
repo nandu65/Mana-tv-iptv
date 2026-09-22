@@ -1,8 +1,10 @@
-﻿import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Search, Settings as SettingsIcon, Plus, ChevronDown, Check, RefreshCw, Star, Tv } from 'lucide-react';
-import { Playlist } from '../../models/types';
+import { Playlist, UserAccount } from '../../models/types';
+import { UserProfileDropdown } from '../Auth/UserProfileDropdown';
 
 interface HeaderProps {
+  user: UserAccount | null;
   playlists: Playlist[];
   activePlaylist: Playlist | null;
   favoritesCount: number;
@@ -11,11 +13,15 @@ interface HeaderProps {
   onSelectPlaylist: (id: string) => void;
   onOpenAddPlaylist: () => void;
   onOpenSettings: () => void;
+  onOpenAuthModal: () => void;
+  onLogout: () => void;
+  onLibraryImported: () => void;
   onRefreshActivePlaylist?: () => void;
   isRefreshing?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
+  user,
   playlists,
   activePlaylist,
   favoritesCount,
@@ -24,6 +30,9 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectPlaylist,
   onOpenAddPlaylist,
   onOpenSettings,
+  onOpenAuthModal,
+  onLogout,
+  onLibraryImported,
   onRefreshActivePlaylist,
   isRefreshing = false
 }) => {
@@ -53,7 +62,6 @@ export const Header: React.FC<HeaderProps> = ({
       zIndex: 30,
       userSelect: 'none'
     }}>
-      {/* Brand & Logo */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
         <img
           src="/assets/app_logo.png"
@@ -72,7 +80,6 @@ export const Header: React.FC<HeaderProps> = ({
           </span>
         </div>
 
-        {/* Active Playlist Selector Dropdown */}
         <div ref={dropdownRef} style={{ position: 'relative', marginLeft: '16px' }}>
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -187,7 +194,6 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* Refresh Active Playlist Button */}
         {activePlaylist?.sourceType === 'url' && onRefreshActivePlaylist && (
           <button
             onClick={onRefreshActivePlaylist}
@@ -219,8 +225,7 @@ export const Header: React.FC<HeaderProps> = ({
         )}
       </div>
 
-      {/* Center: Search Bar */}
-      <div style={{ flex: 1, maxWidth: '480px', position: 'relative' }}>
+      <div style={{ flex: 1, maxWidth: '440px', position: 'relative' }}>
         <Search
           size={16}
           color="var(--text-secondary)"
@@ -255,9 +260,7 @@ export const Header: React.FC<HeaderProps> = ({
         />
       </div>
 
-      {/* Right Controls */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        {/* Favorites Badge Indicator */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -274,7 +277,6 @@ export const Header: React.FC<HeaderProps> = ({
           <span>{favoritesCount}</span>
         </div>
 
-        {/* Add Playlist Button */}
         <button
           onClick={onOpenAddPlaylist}
           style={{
@@ -297,7 +299,15 @@ export const Header: React.FC<HeaderProps> = ({
           <span>Add M3U</span>
         </button>
 
-        {/* Settings Button */}
+        <UserProfileDropdown
+          user={user}
+          playlists={playlists}
+          favoritesCount={favoritesCount}
+          onOpenAuthModal={onOpenAuthModal}
+          onLogout={onLogout}
+          onLibraryImported={onLibraryImported}
+        />
+
         <button
           onClick={onOpenSettings}
           title="Settings & Appearance"

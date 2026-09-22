@@ -1,6 +1,6 @@
-﻿import { Channel, Playlist, UiPreferences } from '../models/types';
+import { Channel, Playlist, UiPreferences } from '../models/types';
 
-const STORAGE_KEYS = {
+const BASE_KEYS = {
   PLAYLISTS: 'mana_tv_playlists',
   CHANNELS_PREFIX: 'mana_tv_channels_',
   ACTIVE_PLAYLIST_ID: 'mana_tv_active_playlist_id',
@@ -23,9 +23,23 @@ const DEFAULT_UI_PREFS: UiPreferences = {
 };
 
 export class StorageService {
+  private static currentUserId: string = 'guest';
+
+  public static setScope(userId: string | null): void {
+    this.currentUserId = userId && userId.trim() ? userId.trim() : 'guest';
+  }
+
+  public static getScope(): string {
+    return this.currentUserId;
+  }
+
+  private static getKey(baseKey: string): string {
+    return `${baseKey}_${this.currentUserId}`;
+  }
+
   public static getUiPreferences(): UiPreferences {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.UI_PREFS);
+      const data = localStorage.getItem(this.getKey(BASE_KEYS.UI_PREFS));
       if (data) {
         return { ...DEFAULT_UI_PREFS, ...JSON.parse(data) };
       }
@@ -37,7 +51,7 @@ export class StorageService {
 
   public static saveUiPreferences(prefs: UiPreferences): void {
     try {
-      localStorage.setItem(STORAGE_KEYS.UI_PREFS, JSON.stringify(prefs));
+      localStorage.setItem(this.getKey(BASE_KEYS.UI_PREFS), JSON.stringify(prefs));
     } catch (e) {
       console.error('Failed to save UI preferences:', e);
     }
@@ -45,7 +59,7 @@ export class StorageService {
 
   public static getPlaylists(): Playlist[] {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.PLAYLISTS);
+      const data = localStorage.getItem(this.getKey(BASE_KEYS.PLAYLISTS));
       if (data) {
         return JSON.parse(data);
       }
@@ -57,27 +71,28 @@ export class StorageService {
 
   public static savePlaylists(playlists: Playlist[]): void {
     try {
-      localStorage.setItem(STORAGE_KEYS.PLAYLISTS, JSON.stringify(playlists));
+      localStorage.setItem(this.getKey(BASE_KEYS.PLAYLISTS), JSON.stringify(playlists));
     } catch (e) {
       console.error('Failed to save playlists:', e);
     }
   }
 
   public static getActivePlaylistId(): string | null {
-    return localStorage.getItem(STORAGE_KEYS.ACTIVE_PLAYLIST_ID);
+    return localStorage.getItem(this.getKey(BASE_KEYS.ACTIVE_PLAYLIST_ID));
   }
 
   public static setActivePlaylistId(id: string | null): void {
+    const key = this.getKey(BASE_KEYS.ACTIVE_PLAYLIST_ID);
     if (id) {
-      localStorage.setItem(STORAGE_KEYS.ACTIVE_PLAYLIST_ID, id);
+      localStorage.setItem(key, id);
     } else {
-      localStorage.removeItem(STORAGE_KEYS.ACTIVE_PLAYLIST_ID);
+      localStorage.removeItem(key);
     }
   }
 
   public static getChannels(playlistId: string): Channel[] {
     try {
-      const data = localStorage.getItem(`${STORAGE_KEYS.CHANNELS_PREFIX}${playlistId}`);
+      const data = localStorage.getItem(`${this.getKey(BASE_KEYS.CHANNELS_PREFIX)}${playlistId}`);
       if (data) {
         const channels: Channel[] = JSON.parse(data);
         const favorites = this.getFavorites();
@@ -94,19 +109,19 @@ export class StorageService {
 
   public static saveChannels(playlistId: string, channels: Channel[]): void {
     try {
-      localStorage.setItem(`${STORAGE_KEYS.CHANNELS_PREFIX}${playlistId}`, JSON.stringify(channels));
+      localStorage.setItem(`${this.getKey(BASE_KEYS.CHANNELS_PREFIX)}${playlistId}`, JSON.stringify(channels));
     } catch (e) {
       console.error('Failed to save channels:', e);
     }
   }
 
   public static removeChannels(playlistId: string): void {
-    localStorage.removeItem(`${STORAGE_KEYS.CHANNELS_PREFIX}${playlistId}`);
+    localStorage.removeItem(`${this.getKey(BASE_KEYS.CHANNELS_PREFIX)}${playlistId}`);
   }
 
   public static getFavorites(): string[] {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.FAVORITES);
+      const data = localStorage.getItem(this.getKey(BASE_KEYS.FAVORITES));
       if (data) {
         return JSON.parse(data);
       }
@@ -128,7 +143,7 @@ export class StorageService {
       isFav = true;
     }
     try {
-      localStorage.setItem(STORAGE_KEYS.FAVORITES, JSON.stringify(favs));
+      localStorage.setItem(this.getKey(BASE_KEYS.FAVORITES), JSON.stringify(favs));
     } catch (e) {
       console.error('Failed to save favorites:', e);
     }
@@ -136,12 +151,12 @@ export class StorageService {
   }
 
   public static clearFavorites(): void {
-    localStorage.setItem(STORAGE_KEYS.FAVORITES, JSON.stringify([]));
+    localStorage.setItem(this.getKey(BASE_KEYS.FAVORITES), JSON.stringify([]));
   }
 
   public static getRecentlyWatched(): Channel[] {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.RECENTLY_WATCHED);
+      const data = localStorage.getItem(this.getKey(BASE_KEYS.RECENTLY_WATCHED));
       if (data) {
         return JSON.parse(data);
       }
@@ -155,19 +170,19 @@ export class StorageService {
     const list = this.getRecentlyWatched().filter(c => c.id !== channel.id);
     const updated = [{ ...channel, watchedAt: Date.now() }, ...list].slice(0, 30);
     try {
-      localStorage.setItem(STORAGE_KEYS.RECENTLY_WATCHED, JSON.stringify(updated));
+      localStorage.setItem(this.getKey(BASE_KEYS.RECENTLY_WATCHED), JSON.stringify(updated));
     } catch (e) {
       console.error('Failed to save recently watched:', e);
     }
   }
 
   public static clearRecentlyWatched(): void {
-    localStorage.setItem(STORAGE_KEYS.RECENTLY_WATCHED, JSON.stringify([]));
+    localStorage.setItem(this.getKey(BASE_KEYS.RECENTLY_WATCHED), JSON.stringify([]));
   }
 
   public static getHiddenChannels(): string[] {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.HIDDEN_CHANNELS);
+      const data = localStorage.getItem(this.getKey(BASE_KEYS.HIDDEN_CHANNELS));
       if (data) return JSON.parse(data);
     } catch (e) {
       console.error('Failed to get hidden channels:', e);
@@ -179,22 +194,22 @@ export class StorageService {
     const hidden = this.getHiddenChannels();
     if (!hidden.includes(channelId)) {
       hidden.push(channelId);
-      localStorage.setItem(STORAGE_KEYS.HIDDEN_CHANNELS, JSON.stringify(hidden));
+      localStorage.setItem(this.getKey(BASE_KEYS.HIDDEN_CHANNELS), JSON.stringify(hidden));
     }
   }
 
   public static unhideChannel(channelId: string): void {
     const hidden = this.getHiddenChannels().filter(id => id !== channelId);
-    localStorage.setItem(STORAGE_KEYS.HIDDEN_CHANNELS, JSON.stringify(hidden));
+    localStorage.setItem(this.getKey(BASE_KEYS.HIDDEN_CHANNELS), JSON.stringify(hidden));
   }
 
   public static unhideAllChannels(): void {
-    localStorage.setItem(STORAGE_KEYS.HIDDEN_CHANNELS, JSON.stringify([]));
+    localStorage.setItem(this.getKey(BASE_KEYS.HIDDEN_CHANNELS), JSON.stringify([]));
   }
 
   public static getHiddenCategories(): string[] {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.HIDDEN_CATEGORIES);
+      const data = localStorage.getItem(this.getKey(BASE_KEYS.HIDDEN_CATEGORIES));
       if (data) return JSON.parse(data);
     } catch (e) {
       console.error('Failed to get hidden categories:', e);
@@ -207,18 +222,32 @@ export class StorageService {
     const catLower = categoryName.trim().toLowerCase();
     if (!hidden.map(c => c.toLowerCase()).includes(catLower)) {
       hidden.push(categoryName.trim());
-      localStorage.setItem(STORAGE_KEYS.HIDDEN_CATEGORIES, JSON.stringify(hidden));
+      localStorage.setItem(this.getKey(BASE_KEYS.HIDDEN_CATEGORIES), JSON.stringify(hidden));
     }
   }
 
   public static unhideCategory(categoryName: string): void {
     const catLower = categoryName.trim().toLowerCase();
     const hidden = this.getHiddenCategories().filter(c => c.trim().toLowerCase() !== catLower);
-    localStorage.setItem(STORAGE_KEYS.HIDDEN_CATEGORIES, JSON.stringify(hidden));
+    localStorage.setItem(this.getKey(BASE_KEYS.HIDDEN_CATEGORIES), JSON.stringify(hidden));
   }
 
   public static unhideAllCategories(): void {
-    localStorage.setItem(STORAGE_KEYS.HIDDEN_CATEGORIES, JSON.stringify([]));
+    localStorage.setItem(this.getKey(BASE_KEYS.HIDDEN_CATEGORIES), JSON.stringify([]));
+  }
+
+  public static clearUserData(): void {
+    const prefix = `mana_tv_`;
+    const userSuffix = `_${this.currentUserId}`;
+    const keysToRemove: string[] = [];
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(prefix) && k.endsWith(userSuffix)) {
+        keysToRemove.push(k);
+      }
+    }
+    keysToRemove.forEach(k => localStorage.removeItem(k));
   }
 
   public static clearAllData(): void {

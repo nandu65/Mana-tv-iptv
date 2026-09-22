@@ -6,16 +6,21 @@ import {
   Tv,
   EyeOff,
   Trash2,
-  RefreshCw
+  RefreshCw,
+  User,
+  Download,
+  LogOut
 } from 'lucide-react';
-import { AppTheme, AccentColor, CardSize, Playlist, UiPreferences } from '../../models/types';
+import { AppTheme, AccentColor, CardSize, Playlist, UiPreferences, UserAccount } from '../../models/types';
 import { StorageService } from '../../services/storageService';
+import { AuthService } from '../../services/authService';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   uiPreferences: UiPreferences;
   onUpdatePreferences: (prefs: Partial<UiPreferences>) => void;
+  user: UserAccount | null;
   playlists: Playlist[];
   activePlaylist: Playlist | null;
   onSelectPlaylist: (id: string) => void;
@@ -23,6 +28,8 @@ interface SettingsModalProps {
   onRefreshPlaylist: (id: string) => void;
   onOpenAddPlaylist: () => void;
   onLoadSample: () => void;
+  onOpenAuthModal: () => void;
+  onLogout: () => void;
   onDataCleared: () => void;
 }
 
@@ -31,6 +38,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose,
   uiPreferences,
   onUpdatePreferences,
+  user,
   playlists,
   activePlaylist,
   onSelectPlaylist,
@@ -38,9 +46,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onRefreshPlaylist,
   onOpenAddPlaylist,
   onLoadSample,
+  onOpenAuthModal,
+  onLogout,
   onDataCleared
 }) => {
-  const [activeTab, setActiveTab] = useState<'appearance' | 'welcome' | 'playlists' | 'privacy' | 'data'>('appearance');
+  const [activeTab, setActiveTab] = useState<'account' | 'appearance' | 'welcome' | 'playlists' | 'privacy' | 'data'>('account');
   const [hiddenChannels, setHiddenChannels] = useState<string[]>(() => StorageService.getHiddenChannels());
   const [hiddenCategories, setHiddenCategories] = useState<string[]>(() => StorageService.getHiddenCategories());
 
@@ -82,6 +92,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setHiddenCategories([]);
   };
 
+  const handleExportBackup = () => {
+    const data = AuthService.exportUserLibrary();
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mana_tv_${user ? user.username : 'guest'}_backup_${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div style={{
       position: 'fixed',
@@ -96,7 +117,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }}>
       <div style={{
         width: '100%',
-        maxWidth: '760px',
+        maxWidth: '780px',
         maxHeight: '85vh',
         backgroundColor: 'var(--bg-card)',
         border: '1px solid var(--border-subtle)',
@@ -106,7 +127,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         flexDirection: 'column',
         overflow: 'hidden'
       }}>
-        {/* Header */}
         <div style={{
           padding: '20px 24px',
           borderBottom: '1px solid var(--border-subtle)',
@@ -128,9 +148,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </button>
         </div>
 
-        {/* Content Tabs Layout */}
         <div style={{ display: 'flex', flex: 1, minHeight: '420px', overflow: 'hidden' }}>
-          {/* Sidebar Tabs */}
           <div style={{
             width: '200px',
             backgroundColor: 'rgba(0,0,0,0.2)',
@@ -140,6 +158,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             flexDirection: 'column',
             gap: '4px'
           }}>
+            <TabButton
+              icon={<User size={16} />}
+              label="Account & Sync"
+              isActive={activeTab === 'account'}
+              onClick={() => setActiveTab('account')}
+            />
             <TabButton
               icon={<Palette size={16} />}
               label="Appearance"
@@ -172,8 +196,139 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             />
           </div>
 
-          {/* Tab Body */}
           <div style={{ flex: 1, padding: '24px', overflowY: 'auto' }}>
+            {activeTab === 'account' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {user ? (
+                  <div style={{
+                    padding: '16px',
+                    borderRadius: '12px',
+                    background: 'rgba(59, 130, 246, 0.1)',
+                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <div style={{
+                        width: '48px',
+                        height: '48px',
+                        borderRadius: '50%',
+                        backgroundColor: 'var(--primary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '24px'
+                      }}>
+                        {user.avatar || user.displayName[0].toUpperCase()}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '16px', fontWeight: 800, color: '#fff' }}>
+                          {user.displayName}
+                        </div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                          @{user.username} {user.email ? `• ${user.email}` : ''}
+                        </div>
+                        <div style={{ fontSize: '11px', color: 'var(--glow)', marginTop: '2px' }}>
+                          Session active (Never expires until explicit logout)
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+                      <button
+                        onClick={handleExportBackup}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '8px 14px',
+                          borderRadius: '8px',
+                          background: 'rgba(255,255,255,0.1)',
+                          color: '#fff',
+                          fontSize: '12px',
+                          fontWeight: 600
+                        }}
+                      >
+                        <Download size={14} />
+                        <span>Export IPTV Backup</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          if (confirm('Log out from Mana TV?')) {
+                            onLogout();
+                          }
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '8px 14px',
+                          borderRadius: '8px',
+                          background: 'rgba(239, 68, 68, 0.2)',
+                          color: '#EF4444',
+                          fontSize: '12px',
+                          fontWeight: 600
+                        }}
+                      >
+                        <LogOut size={14} />
+                        <span>Log Out</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{
+                    padding: '24px',
+                    borderRadius: '12px',
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid var(--border-subtle)',
+                    textAlign: 'center',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '12px'
+                  }}>
+                    <div style={{
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '50%',
+                      backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'var(--glow)'
+                    }}>
+                      <User size={24} />
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#fff' }}>Guest Mode</h4>
+                      <p style={{ fontSize: '12px', color: 'var(--text-secondary)', maxWidth: '360px', marginTop: '4px' }}>
+                        Create an account to store and sync your IPTV playlists permanently without session expiry.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        onClose();
+                        onOpenAuthModal();
+                      }}
+                      style={{
+                        padding: '10px 20px',
+                        borderRadius: '10px',
+                        background: 'var(--primary)',
+                        color: '#fff',
+                        fontSize: '13px',
+                        fontWeight: 700,
+                        boxShadow: '0 4px 14px var(--glow-shadow)'
+                      }}
+                    >
+                      Sign In / Create Account
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             {activeTab === 'appearance' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div>

@@ -1,7 +1,23 @@
-﻿export type AppTheme = 'DARK' | 'OLED_BLACK' | 'BLUE';
+export type AppTheme = 'DARK' | 'OLED_BLACK' | 'BLUE';
 export type AccentColor = 'BLUE' | 'PURPLE' | 'GREEN' | 'RED';
 export type CardSize = 'COMPACT' | 'NORMAL' | 'LARGE';
 export type AspectRatioMode = 'FIT' | 'FILL' | 'STRETCH' | '16_9' | '4_3';
+
+export interface UserAccount {
+  id: string;
+  username: string;
+  email: string;
+  displayName: string;
+  avatar?: string;
+  createdAt: number;
+  passwordHash: string;
+}
+
+export interface AuthSession {
+  user: UserAccount;
+  token: string;
+  createdAt: number;
+}
 
 export interface Channel {
   id: string;
@@ -39,9 +55,9 @@ export interface UiPreferences {
   accentColor: AccentColor;
   cardSize: CardSize;
   showLogos: boolean;
-  welcomeAudioVolume: number; // 0 - 150
+  welcomeAudioVolume: number;
   welcomeAudioEnabled: boolean;
-  autoRefreshHours: number; // 0 = off, 1, 3, 6, 12, 24
+  autoRefreshHours: number;
   isFirstRunCompleted: boolean;
 }
 
@@ -73,4 +89,19 @@ export interface StreamMetrics {
   droppedFrames?: number;
   codec?: string;
   fps?: number;
+}
+
+export interface UserLibraryBackup {
+  version: string;
+  user: {
+    username: string;
+    displayName: string;
+  };
+  exportedAt: number;
+  playlists: Playlist[];
+  channelsMap: Record<string, Channel[]>;
+  favorites: string[];
+  hiddenChannels: string[];
+  hiddenCategories: string[];
+  uiPreferences: UiPreferences;
 }
