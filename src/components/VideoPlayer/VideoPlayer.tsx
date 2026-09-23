@@ -14,7 +14,10 @@ import {
   ChevronRight,
   Subtitles,
   Layers,
-  RotateCw
+  RotateCw,
+  RefreshCw,
+  ShieldAlert,
+  Globe
 } from 'lucide-react';
 import { Channel, AspectRatioMode, PlayerQuality, AudioTrack, SubtitleTrack, StreamMetrics } from '../../models/types';
 
@@ -25,6 +28,12 @@ interface VideoPlayerProps {
   onSelectChannel: (channel: Channel) => void;
   onToggleFavorite: (id: string) => void;
 }
+
+const PROXIES = [
+  { id: 'direct', name: 'Direct Stream', buildUrl: (u: string) => u },
+  { id: 'corsproxy', name: 'CORS Proxy (corsproxy.io)', buildUrl: (u: string) => 'https://corsproxy.io/?' + encodeURIComponent(u) },
+  { id: 'allorigins', name: 'CORS Proxy (allorigins)', buildUrl: (u: string) => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u) }
+];
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   channel,
@@ -45,6 +54,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [showControls, setShowControls] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [proxyIndex, setProxyIndex] = useState(0);
 
   // Modal / HUD states
   const [showDrawer, setShowDrawer] = useState(false);
@@ -64,6 +74,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [metrics, setMetrics] = useState<StreamMetrics>({});
 
   const controlsTimeoutRef = useRef<number | null>(null);
+  const mediaRecoveryCountRef = useRef(0);
+  const networkRecoveryCountRef = useRef(0);
 
   const isModalOpen = showDrawer || showInfo || showQualityMenu || showAudioMenu || showSubMenu || showAspectMenu;
 
@@ -79,7 +91,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   }, [isModalOpen]);
 
-  useEffect(() => {
+  const loadStream = useCallback((rawUrl: string, pIdx: number) => {
     const video = videoRef.current;
     if (!video) return;
 
@@ -88,36 +100,52 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setQualities([]);
     setAudioTracks([]);
     setSubtitleTracks([]);
+    mediaRecoveryCountRef.current = 0;
+    networkRecoveryCountRef.current = 0;
 
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
     }
 
-    const streamUrl = channel.url;
-    const isHls = streamUrl.includes('.m3u8') || streamUrl.includes('/hls') || streamUrl.includes('test-streams.mux.dev');
+    const currentProxy = PROXIES[pIdx] || PROXIES[0];
+    const targetUrl = currentProxy.buildUrl(rawUrl);
+    const isHlsStream = rawUrl.includes('.m3u8') || rawUrl.includes('/hls') || rawUrl.includes('test-streams.mux.dev') || !rawUrl.includes('.');
 
-    if (isHls && Hls.isSupported()) {
+    if (isHlsStream && Hls.isSupported()) {
       const hls = new Hls({
         enableWorker: true,
-        lowLatencyMode: true,
+        lowLatencyMode: false,
         backBufferLength: 60,
-        manifestLoadingTimeOut: 15000,
-        levelLoadingTimeOut: 15000
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60,
+        maxBufferSize: 60 * 1000 * 1000,
+        maxBufferHole: 0.5,
+        highBufferWatchdogPeriod: 2,
+        nudgeOffset: 0.2,
+        nudgeMaxRetry: 5,
+        manifestLoadingTimeOut: 20000,
+        manifestLoadingMaxRetry: 4,
+        levelLoadingTimeOut: 20000,
+        levelLoadingMaxRetry: 4,
+        fragLoadingTimeOut: 20000,
+        fragLoadingMaxRetry: 6,
+        startFragPrefetch: true
       });
 
       hlsRef.current = hls;
-      hls.loadSource(streamUrl);
+      hls.loadSource(targetUrl);
       hls.attachMedia(video);
 
       hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
         setIsLoading(false);
+        setErrorMsg(null);
         video.play().catch(e => console.warn('Autoplay notice:', e));
 
         const qList: PlayerQuality[] = data.levels.map((lvl, index) => ({
           height: lvl.height,
           bitrate: lvl.bitrate,
-          label: lvl.height ? `${lvl.height}p (${Math.round(lvl.bitrate / 1000)} kbps)` : `Quality ${index + 1}`,
+          label: lvl.height ? (lvl.height + 'p (' + Math.round(lvl.bitrate / 1000) + ' kbps)') : ('Quality ' + (index + 1)),
           levelIndex: index
         }));
         setQualities(qList);
@@ -128,7 +156,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           id: trk.id,
           name: trk.name,
           lang: trk.lang,
-          label: trk.name || trk.lang || `Track ${trk.id + 1}`
+          label: trk.name || trk.lang || ('Track ' + (trk.id + 1))
         }));
         setAudioTracks(aList);
         setSelectedAudio(hls.audioTrack);
@@ -139,7 +167,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           id: sub.id,
           name: sub.name,
           lang: sub.lang,
-          label: sub.name || sub.lang || `Subtitle ${sub.id + 1}`
+          label: sub.name || sub.lang || ('Subtitle ' + (sub.id + 1))
         }));
         setSubtitleTracks(sList);
       });
@@ -149,7 +177,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         if (lvl) {
           setMetrics(prev => ({
             ...prev,
-            resolution: `${lvl.width}x${lvl.height}`,
+            resolution: lvl.width + 'x' + lvl.height,
             bitrateKbps: Math.round(lvl.bitrate / 1000),
             codec: lvl.videoCodec || lvl.audioCodec
           }));
@@ -160,25 +188,67 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         if (data.fatal) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
-              hls.startLoad();
+              if (networkRecoveryCountRef.current < 2) {
+                networkRecoveryCountRef.current += 1;
+                hls.startLoad();
+              } else if (pIdx < PROXIES.length - 1) {
+                console.warn('Direct stream network/CORS error. Auto-trying proxy ' + (pIdx + 1) + '...');
+                setProxyIndex(pIdx + 1);
+              } else {
+                setErrorMsg('Stream failed to load. The channel source may be offline, geo-blocked, or blocking CORS.');
+                setIsLoading(false);
+                hls.destroy();
+              }
               break;
             case Hls.ErrorTypes.MEDIA_ERROR:
-              hls.recoverMediaError();
+              if (mediaRecoveryCountRef.current === 0) {
+                mediaRecoveryCountRef.current += 1;
+                hls.recoverMediaError();
+              } else if (mediaRecoveryCountRef.current === 1) {
+                mediaRecoveryCountRef.current += 1;
+                hls.swapAudioCodec();
+                hls.recoverMediaError();
+              } else if (pIdx < PROXIES.length - 1) {
+                setProxyIndex(pIdx + 1);
+              } else {
+                setErrorMsg('Media decoding error. The stream codec is not supported natively in this browser.');
+                setIsLoading(false);
+                hls.destroy();
+              }
               break;
             default:
-              setErrorMsg('Unable to play live stream. Check connection or stream URL.');
-              setIsLoading(false);
-              hls.destroy();
+              if (pIdx < PROXIES.length - 1) {
+                setProxyIndex(pIdx + 1);
+              } else {
+                setErrorMsg('Unable to play live stream. Check connection, proxy mode, or try another channel.');
+                setIsLoading(false);
+                hls.destroy();
+              }
               break;
+          }
+        } else if (data.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR) {
+          if (video && !video.paused) {
+            video.currentTime += 0.2;
           }
         }
       });
     } else {
-      video.src = streamUrl;
+      video.src = targetUrl;
       video.load();
       video.play().catch(e => console.warn('Direct play notice:', e));
       setIsLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    const isHttpsOrigin = window.location.protocol === 'https:';
+    const isHttpStream = channel.url.toLowerCase().startsWith('http:');
+    const initialProxy = (isHttpsOrigin && isHttpStream) ? 1 : 0;
+    setProxyIndex(initialProxy);
+  }, [channel.url]);
+
+  useEffect(() => {
+    loadStream(channel.url, proxyIndex);
 
     return () => {
       if (hlsRef.current) {
@@ -186,7 +256,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         hlsRef.current = null;
       }
     };
-  }, [channel.url]);
+  }, [channel.url, proxyIndex, loadStream]);
 
   const getAspectStyle = (): React.CSSProperties => {
     switch (aspectRatio) {
@@ -308,6 +378,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setShowSubMenu(false);
   };
 
+  const handleNextChannel = () => {
+    const curIndex = allChannels.findIndex(c => c.id === channel.id);
+    if (curIndex !== -1 && curIndex < allChannels.length - 1) {
+      onSelectChannel(allChannels[curIndex + 1]);
+    }
+  };
+
   return (
     <div
       ref={containerRef}
@@ -341,6 +418,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           setIsPlaying(true);
         }}
         onPause={() => setIsPlaying(false)}
+        onError={() => {
+          if (proxyIndex < PROXIES.length - 1) {
+            setProxyIndex(proxyIndex + 1);
+          } else {
+            setErrorMsg('Playback error: stream could not be decoded or is offline.');
+            setIsLoading(false);
+          }
+        }}
       />
 
       {isLoading && !errorMsg && (
@@ -350,11 +435,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           flexDirection: 'column',
           alignItems: 'center',
           gap: '12px',
-          background: 'rgba(0,0,0,0.65)',
+          background: 'rgba(0,0,0,0.75)',
           padding: '20px 30px',
           borderRadius: '16px',
           backdropFilter: 'blur(10px)',
-          zIndex: 60
+          zIndex: 60,
+          border: '1px solid rgba(255,255,255,0.1)'
         }}>
           <div style={{
             width: '36px',
@@ -365,7 +451,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             animation: 'spin 0.8s linear infinite'
           }} />
           <span style={{ fontSize: '13px', color: '#fff', fontWeight: 600 }}>
-            Buffering Stream...
+            Buffering Stream ({PROXIES[proxyIndex]?.name})...
           </span>
         </div>
       )}
@@ -373,150 +459,188 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       {errorMsg && (
         <div style={{
           position: 'absolute',
-          background: 'rgba(239, 68, 68, 0.95)',
+          background: 'rgba(20, 24, 33, 0.95)',
+          border: '1px solid rgba(239, 68, 68, 0.4)',
           padding: '24px 32px',
           borderRadius: '16px',
           color: '#fff',
           textAlign: 'center',
-          maxWidth: '450px',
+          maxWidth: '480px',
           zIndex: 60,
-          boxShadow: '0 12px 36px rgba(0,0,0,0.5)'
+          boxShadow: '0 16px 40px rgba(0,0,0,0.7)',
+          backdropFilter: 'blur(20px)'
         }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px', color: '#EF4444' }}>
+            <ShieldAlert size={40} />
+          </div>
           <h4 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px' }}>Stream Unavailable</h4>
-          <p style={{ fontSize: '13px', marginBottom: '16px', opacity: 0.9 }}>{errorMsg}</p>
-          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+          <p style={{ fontSize: '13px', marginBottom: '16px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+            {errorMsg}
+          </p>
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <button
               onClick={() => {
                 setErrorMsg(null);
-                if (hlsRef.current) hlsRef.current.startLoad();
+                setProxyIndex(0);
+                loadStream(channel.url, 0);
               }}
               style={{
-                padding: '8px 18px',
+                padding: '8px 16px',
                 borderRadius: '8px',
-                background: '#fff',
-                color: '#EF4444',
-                fontWeight: 700,
-                fontSize: '13px'
-              }}
-            >
-              Retry
-            </button>
-            <button
-              onClick={onBack}
-              style={{
-                padding: '8px 18px',
-                borderRadius: '8px',
-                background: 'rgba(0,0,0,0.4)',
+                background: 'rgba(255,255,255,0.1)',
                 color: '#fff',
                 fontWeight: 600,
-                fontSize: '13px'
+                fontSize: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
               }}
             >
-              Back to Channels
+              <RefreshCw size={14} /> Retry Direct
+            </button>
+            <button
+              onClick={() => {
+                setErrorMsg(null);
+                const nextIdx = (proxyIndex + 1) % PROXIES.length;
+                setProxyIndex(nextIdx);
+              }}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '8px',
+                background: 'var(--primary)',
+                color: '#fff',
+                fontWeight: 700,
+                fontSize: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <Globe size={14} /> Try CORS Proxy
+            </button>
+            <button
+              onClick={handleNextChannel}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '8px',
+                background: 'rgba(255,255,255,0.1)',
+                color: '#fff',
+                fontWeight: 600,
+                fontSize: '12px'
+              }}
+            >
+              Next Channel
             </button>
           </div>
         </div>
       )}
 
+      {/* Top Bar Overlay */}
       <div style={{
         position: 'absolute',
-        inset: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
+        top: 0,
+        left: 0,
+        right: 0,
         padding: '24px',
-        opacity: showControls || isModalOpen ? 1 : 0,
-        pointerEvents: showControls || isModalOpen ? 'auto' : 'none',
-        transition: 'opacity 0.25s ease',
-        background: 'linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 25%, transparent 75%, rgba(0,0,0,0.85) 100%)',
+        background: 'linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, transparent 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        opacity: showControls ? 1 : 0,
+        pointerEvents: showControls ? 'auto' : 'none',
+        transition: 'opacity 0.3s ease',
         zIndex: 55
       }}>
-        {/* Top bar */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <button
-              onClick={onBack}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '8px 16px',
-                borderRadius: '10px',
-                background: 'rgba(255,255,255,0.12)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                color: '#fff',
-                fontSize: '14px',
-                fontWeight: 600
-              }}
-            >
-              <ArrowLeft size={18} />
-              <span>Back</span>
-            </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <button
+            onClick={onBack}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 14px',
+              borderRadius: '10px',
+              background: 'rgba(255, 255, 255, 0.15)',
+              backdropFilter: 'blur(10px)',
+              color: '#fff',
+              fontSize: '13px',
+              fontWeight: 600,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+            }}
+          >
+            <ArrowLeft size={16} />
+            <span>Back</span>
+          </button>
 
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#fff', letterSpacing: '-0.2px' }}>
-                  {channel.name}
-                </h2>
-                <span style={{
-                  padding: '2px 8px',
-                  borderRadius: '6px',
-                  backgroundColor: 'var(--live-red)',
-                  color: '#fff',
-                  fontSize: '11px',
-                  fontWeight: 800
-                }}>
-                  LIVE
-                </span>
-              </div>
-              <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                {channel.group || 'Live Stream'} {channel.country ? `• ${channel.country}` : ''}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>{channel.name}</h2>
+              <span style={{
+                background: '#EF4444',
+                color: '#fff',
+                fontSize: '10px',
+                fontWeight: 800,
+                padding: '2px 6px',
+                borderRadius: '4px',
+                letterSpacing: '0.5px'
+              }}>
+                LIVE
               </span>
             </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <button
-              onClick={() => setShowDrawer(!showDrawer)}
-              title="Channel List (C)"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 14px',
-                borderRadius: '10px',
-                background: showDrawer ? 'var(--primary)' : 'rgba(255,255,255,0.12)',
-                backdropFilter: 'blur(10px)',
-                color: '#fff',
-                fontSize: '13px',
-                fontWeight: 600
-              }}
-            >
-              <Tv size={16} />
-              <span>Channels</span>
-            </button>
-
-            <button
-              onClick={() => onToggleFavorite(channel.id)}
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
-                background: 'rgba(255,255,255,0.12)',
-                backdropFilter: 'blur(10px)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: channel.isFavorite ? 'var(--favorite-yellow)' : '#fff'
-              }}
-            >
-              <Star size={18} fill={channel.isFavorite ? 'var(--favorite-yellow)' : 'none'} />
-            </button>
+            {channel.group && (
+              <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{channel.group}</span>
+            )}
           </div>
         </div>
 
-        {/* Bottom bar: ALL CONTROLS GROUPED ON THE LEFT BESIDE VOLUME (avoiding bottom-right Netlify badge) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button
+            onClick={() => setShowDrawer(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 14px',
+              borderRadius: '10px',
+              background: 'rgba(255, 255, 255, 0.15)',
+              backdropFilter: 'blur(10px)',
+              color: '#fff',
+              fontSize: '13px',
+              fontWeight: 600
+            }}
+          >
+            <Tv size={16} />
+            <span>Channels</span>
+          </button>
+
+          <button
+            onClick={() => onToggleFavorite(channel.id)}
+            style={{
+              padding: '8px',
+              borderRadius: '10px',
+              background: 'rgba(255, 255, 255, 0.15)',
+              backdropFilter: 'blur(10px)',
+              color: channel.isFavorite ? '#F59E0B' : '#fff'
+            }}
+          >
+            <Star size={18} fill={channel.isFavorite ? '#F59E0B' : 'none'} />
+          </button>
+        </div>
+      </div>
+
+      {/* Bottom Bar Overlay with Left-Aligned Controls */}
+      <div style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        padding: '24px',
+        background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)',
+        opacity: showControls ? 1 : 0,
+        pointerEvents: showControls ? 'auto' : 'none',
+        transition: 'opacity 0.3s ease',
+        zIndex: 55
+      }}>
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -604,6 +728,31 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             <span>Info</span>
           </button>
 
+          {/* Proxy Mode Selector Button */}
+          <button
+            onClick={() => {
+              const nextIdx = (proxyIndex + 1) % PROXIES.length;
+              setProxyIndex(nextIdx);
+            }}
+            title="Switch Stream Route (Direct / CORS Proxy)"
+            style={{
+              padding: '8px 12px',
+              borderRadius: '8px',
+              background: proxyIndex > 0 ? 'rgba(59, 130, 246, 0.4)' : 'rgba(255,255,255,0.12)',
+              border: proxyIndex > 0 ? '1px solid rgba(59, 130, 246, 0.8)' : 'none',
+              color: '#fff',
+              fontSize: '12px',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              flexShrink: 0
+            }}
+          >
+            <Globe size={15} />
+            <span>{PROXIES[proxyIndex].id === 'direct' ? 'Direct' : 'Proxy'}</span>
+          </button>
+
           {/* Quality Selector */}
           {qualities.length > 0 && (
             <button
@@ -622,7 +771,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               }}
             >
               <Layers size={15} />
-              <span>{selectedQuality === -1 ? 'Auto' : qualities[selectedQuality]?.label || 'Quality'}</span>
+              <span>{selectedQuality === -1 ? 'Auto' : (qualities[selectedQuality]?.label || 'Quality')}</span>
             </button>
           )}
 
@@ -666,7 +815,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               }}
             >
               <Subtitles size={15} />
-              <span>{selectedSubtitle === -1 ? 'Subs Off' : subtitleTracks[selectedSubtitle]?.label || 'Subs'}</span>
+              <span>{selectedSubtitle === -1 ? 'Subs Off' : (subtitleTracks[selectedSubtitle]?.label || 'Subs')}</span>
             </button>
           )}
 
@@ -716,7 +865,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           position: 'absolute',
           top: '80px',
           left: '24px',
-          width: '280px',
+          width: '320px',
           background: 'rgba(15, 20, 30, 0.95)',
           backdropFilter: 'blur(16px)',
           border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -726,12 +875,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           zIndex: 60
         }}>
           <h4 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '12px', color: 'var(--glow)' }}>
-            Stream Information
+            Stream Information & Route
           </h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: 'var(--text-secondary)' }}>Channel</span>
               <span style={{ fontWeight: 600 }}>{channel.name}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>Route Mode</span>
+              <span style={{ fontWeight: 600, color: proxyIndex > 0 ? '#60A5FA' : '#34D399' }}>
+                {PROXIES[proxyIndex].name}
+              </span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: 'var(--text-secondary)' }}>Resolution</span>
@@ -747,20 +902,29 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               <span style={{ color: 'var(--text-secondary)' }}>Aspect Ratio</span>
               <span style={{ fontWeight: 600 }}>{aspectRatio}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Protocol</span>
-              <span style={{ fontWeight: 600 }}>{channel.url.startsWith('https') ? 'HTTPS (Secure)' : 'HTTP'}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px' }}>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>Stream URL</span>
+              <span style={{
+                fontSize: '10px',
+                background: 'rgba(0,0,0,0.4)',
+                padding: '4px 6px',
+                borderRadius: '4px',
+                wordBreak: 'break-all',
+                color: 'rgba(255,255,255,0.7)'
+              }}>
+                {channel.url}
+              </span>
             </div>
           </div>
         </div>
       )}
 
-      {/* Aspect Ratio Menu Popup (Anchored on Left) */}
+      {/* Aspect Ratio Menu Popup */}
       {showAspectMenu && (
         <div style={{
           position: 'absolute',
           bottom: '80px',
-          left: '360px',
+          left: '380px',
           background: 'rgba(15, 20, 30, 0.95)',
           backdropFilter: 'blur(16px)',
           border: '1px solid rgba(255, 255, 255, 0.15)',
@@ -770,7 +934,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           display: 'flex',
           flexDirection: 'column',
           gap: '4px',
-          minWidth: '160px'
+          minWidth: '150px'
         }}>
           <div style={{ fontSize: '11px', color: 'var(--text-secondary)', padding: '4px 8px', fontWeight: 700 }}>
             ASPECT RATIO
@@ -798,7 +962,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </div>
       )}
 
-      {/* Quality Menu Popup (Anchored on Left) */}
+      {/* Quality Menu Popup */}
       {showQualityMenu && (
         <div style={{
           position: 'absolute',
@@ -852,7 +1016,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </div>
       )}
 
-      {/* Audio Menu Popup (Anchored on Left) */}
+      {/* Audio Menu Popup */}
       {showAudioMenu && (
         <div style={{
           position: 'absolute',
@@ -892,7 +1056,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </div>
       )}
 
-      {/* Subtitles Menu Popup (Anchored on Left) */}
+      {/* Subtitles Menu Popup */}
       {showSubMenu && (
         <div style={{
           position: 'absolute',
