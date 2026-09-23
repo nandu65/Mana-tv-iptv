@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
 import {
   ArrowLeft,
@@ -16,8 +16,7 @@ import {
   Layers,
   RotateCw,
   RefreshCw,
-  ShieldAlert,
-  Globe
+  ShieldAlert
 } from 'lucide-react';
 import { Channel, AspectRatioMode, PlayerQuality, AudioTrack, SubtitleTrack, StreamMetrics } from '../../models/types';
 
@@ -28,17 +27,6 @@ interface VideoPlayerProps {
   onSelectChannel: (channel: Channel) => void;
   onToggleFavorite: (id: string) => void;
 }
-
-const getProxyList = () => {
-  const isNetlifyOrProd = typeof window !== 'undefined';
-  const origin = isNetlifyOrProd ? window.location.origin : '';
-  
-  return [
-    { id: 'direct', name: 'Direct Stream', buildUrl: (u: string) => u },
-    { id: 'built-in', name: 'Built-in HTTPS Proxy', buildUrl: (u: string) => origin + '/api/proxy?url=' + encodeURIComponent(u) },
-    { id: 'codetabs', name: 'Cloud Proxy Fallback', buildUrl: (u: string) => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u) }
-  ];
-};
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   channel,
@@ -51,6 +39,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
 
+  // Playback state
   const [isPlaying, setIsPlaying] = useState(true);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
@@ -59,9 +48,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [showControls, setShowControls] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [proxyIndex, setProxyIndex] = useState(0);
+  const [useProxy, setUseProxy] = useState(false);
 
-  // Modal / HUD states
+  // HUD Popups
   const [showDrawer, setShowDrawer] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const [showQualityMenu, setShowQualityMenu] = useState(false);
@@ -69,7 +58,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [showSubMenu, setShowSubMenu] = useState(false);
   const [showAspectMenu, setShowAspectMenu] = useState(false);
 
-  // Available tracks & metrics
+  // Tracks & Info
   const [qualities, setQualities] = useState<PlayerQuality[]>([]);
   const [selectedQuality, setSelectedQuality] = useState<number>(-1);
   const [audioTracks, setAudioTracks] = useState<AudioTrack[]>([]);
@@ -79,13 +68,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [metrics, setMetrics] = useState<StreamMetrics>({});
 
   const controlsTimeoutRef = useRef<number | null>(null);
-  const mediaRecoveryCountRef = useRef(0);
-  const networkRecoveryCountRef = useRef(0);
-
   const isModalOpen = showDrawer || showInfo || showQualityMenu || showAudioMenu || showSubMenu || showAspectMenu;
-  const PROXIES = getProxyList();
 
-  const resetControlsTimer = useCallback(() => {
+  // Auto-hide controls timer
+  const resetControlsTimer = () => {
     setShowControls(true);
     if (controlsTimeoutRef.current) {
       window.clearTimeout(controlsTimeoutRef.current);
@@ -95,9 +81,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         setShowControls(false);
       }, 4500);
     }
-  }, [isModalOpen]);
+  };
 
-  const loadStream = useCallback((rawUrl: string, pIdx: number) => {
+  // Main Stream Loader Effect
+  useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
@@ -106,19 +93,21 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setQualities([]);
     setAudioTracks([]);
     setSubtitleTracks([]);
-    mediaRecoveryCountRef.current = 0;
-    networkRecoveryCountRef.current = 0;
+    setMetrics({});
 
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
     }
 
-    const currentProxy = PROXIES[pIdx] || PROXIES[0];
-    const targetUrl = currentProxy.buildUrl(rawUrl);
-    const isHlsStream = rawUrl.includes('.m3u8') || rawUrl.includes('/hls') || rawUrl.includes('test-streams.mux.dev') || !rawUrl.includes('.');
+    const rawUrl = channel.url.trim();
+    const finalUrl = useProxy
+      ? (window.location.origin + '/api/proxy?url=' + encodeURIComponent(rawUrl))
+      : rawUrl;
 
-    if (isHlsStream && Hls.isSupported()) {
+    const isHls = finalUrl.includes('.m3u8') || finalUrl.includes('/hls') || !finalUrl.includes('.mp4');
+
+    if (isHls && Hls.isSupported()) {
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: false,
@@ -127,20 +116,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         maxMaxBufferLength: 60,
         maxBufferSize: 60 * 1000 * 1000,
         maxBufferHole: 0.5,
-        highBufferWatchdogPeriod: 2,
-        nudgeOffset: 0.2,
-        nudgeMaxRetry: 5,
         manifestLoadingTimeOut: 20000,
-        manifestLoadingMaxRetry: 4,
+        manifestLoadingMaxRetry: 3,
         levelLoadingTimeOut: 20000,
-        levelLoadingMaxRetry: 4,
+        levelLoadingMaxRetry: 3,
         fragLoadingTimeOut: 20000,
-        fragLoadingMaxRetry: 6,
-        startFragPrefetch: true
+        fragLoadingMaxRetry: 4
       });
 
       hlsRef.current = hls;
-      hls.loadSource(targetUrl);
+      hls.loadSource(finalUrl);
       hls.attachMedia(video);
 
       hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
@@ -151,7 +136,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         const qList: PlayerQuality[] = data.levels.map((lvl, index) => ({
           height: lvl.height,
           bitrate: lvl.bitrate,
-          label: lvl.height ? (lvl.height + 'p (' + Math.round(lvl.bitrate / 1000) + ' kbps)') : ('Quality ' + (index + 1)),
+          label: lvl.height ? (lvl.height + 'p') : ('Level ' + (index + 1)),
           levelIndex: index
         }));
         setQualities(qList);
@@ -162,7 +147,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           id: trk.id,
           name: trk.name,
           lang: trk.lang,
-          label: trk.name || trk.lang || ('Track ' + (trk.id + 1))
+          label: trk.name || trk.lang || ('Audio ' + (trk.id + 1))
         }));
         setAudioTracks(aList);
         setSelectedAudio(hls.audioTrack);
@@ -173,7 +158,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           id: sub.id,
           name: sub.name,
           lang: sub.lang,
-          label: sub.name || sub.lang || ('Subtitle ' + (sub.id + 1))
+          label: sub.name || sub.lang || ('Sub ' + (sub.id + 1))
         }));
         setSubtitleTracks(sList);
       });
@@ -184,8 +169,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           setMetrics(prev => ({
             ...prev,
             resolution: lvl.width + 'x' + lvl.height,
-            bitrateKbps: Math.round(lvl.bitrate / 1000),
-            codec: lvl.videoCodec || lvl.audioCodec
+            bitrateKbps: Math.round(lvl.bitrate / 1000)
           }));
         }
       });
@@ -194,67 +178,33 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         if (data.fatal) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
-              if (networkRecoveryCountRef.current < 2) {
-                networkRecoveryCountRef.current += 1;
-                hls.startLoad();
-              } else if (pIdx < PROXIES.length - 1) {
-                console.warn('Direct stream network/CORS error. Auto-trying proxy ' + (pIdx + 1) + '...');
-                setProxyIndex(pIdx + 1);
+              if (!useProxy && window.location.protocol === 'https:' && rawUrl.startsWith('http:')) {
+                // Auto try proxy for HTTP streams on HTTPS
+                setUseProxy(true);
               } else {
-                setErrorMsg('Stream failed to load. The stream server may be offline or geo-restricted.');
+                setErrorMsg('Network error: stream server is offline or blocking connection.');
                 setIsLoading(false);
                 hls.destroy();
               }
               break;
             case Hls.ErrorTypes.MEDIA_ERROR:
-              if (mediaRecoveryCountRef.current === 0) {
-                mediaRecoveryCountRef.current += 1;
-                hls.recoverMediaError();
-              } else if (mediaRecoveryCountRef.current === 1) {
-                mediaRecoveryCountRef.current += 1;
-                hls.swapAudioCodec();
-                hls.recoverMediaError();
-              } else if (pIdx < PROXIES.length - 1) {
-                setProxyIndex(pIdx + 1);
-              } else {
-                setErrorMsg('Media decoding error. The stream codec is not supported natively in this browser.');
-                setIsLoading(false);
-                hls.destroy();
-              }
+              hls.recoverMediaError();
               break;
             default:
-              if (pIdx < PROXIES.length - 1) {
-                setProxyIndex(pIdx + 1);
-              } else {
-                setErrorMsg('Unable to play live stream. Check connection or try switching proxy route.');
-                setIsLoading(false);
-                hls.destroy();
-              }
+              setErrorMsg('Unable to play this live stream.');
+              setIsLoading(false);
+              hls.destroy();
               break;
-          }
-        } else if (data.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR) {
-          if (video && !video.paused) {
-            video.currentTime += 0.2;
           }
         }
       });
-    } else {
-      video.src = targetUrl;
+    } else if (video.canPlayType('application/vnd.apple.mpegurl') || !isHls) {
+      // Native HLS support (Safari / iOS) or Direct MP4/WebM
+      video.src = finalUrl;
       video.load();
       video.play().catch(e => console.warn('Direct play notice:', e));
       setIsLoading(false);
     }
-  }, [PROXIES]);
-
-  useEffect(() => {
-    const isHttpsOrigin = window.location.protocol === 'https:';
-    const isHttpStream = channel.url.toLowerCase().startsWith('http:');
-    const initialProxy = (isHttpsOrigin && isHttpStream) ? 1 : 0;
-    setProxyIndex(initialProxy);
-  }, [channel.url]);
-
-  useEffect(() => {
-    loadStream(channel.url, proxyIndex);
 
     return () => {
       if (hlsRef.current) {
@@ -262,19 +212,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         hlsRef.current = null;
       }
     };
-  }, [channel.url, proxyIndex, loadStream]);
+  }, [channel.id, channel.url, useProxy]);
 
-  const getAspectStyle = (): React.CSSProperties => {
-    switch (aspectRatio) {
-      case 'FILL': return { objectFit: 'cover' };
-      case 'STRETCH': return { objectFit: 'fill' };
-      case '16_9': return { aspectRatio: '16/9', objectFit: 'contain' };
-      case '4_3': return { aspectRatio: '4/3', objectFit: 'contain' };
-      case 'FIT':
-      default: return { objectFit: 'contain' };
-    }
-  };
-
+  // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       resetControlsTimer();
@@ -332,7 +272,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isModalOpen, channel.id, allChannels, resetControlsTimer, onBack, onSelectChannel]);
+  }, [isModalOpen, channel.id, allChannels, onBack, onSelectChannel]);
 
   const togglePlay = () => {
     if (!videoRef.current) return;
@@ -384,10 +324,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setShowSubMenu(false);
   };
 
-  const handleNextChannel = () => {
-    const curIndex = allChannels.findIndex(c => c.id === channel.id);
-    if (curIndex !== -1 && curIndex < allChannels.length - 1) {
-      onSelectChannel(allChannels[curIndex + 1]);
+  const getAspectStyle = (): React.CSSProperties => {
+    switch (aspectRatio) {
+      case 'FILL': return { objectFit: 'cover' };
+      case 'STRETCH': return { objectFit: 'fill' };
+      case '16_9': return { aspectRatio: '16/9', objectFit: 'contain' };
+      case '4_3': return { aspectRatio: '4/3', objectFit: 'contain' };
+      case 'FIT':
+      default: return { objectFit: 'contain' };
     }
   };
 
@@ -425,15 +369,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         }}
         onPause={() => setIsPlaying(false)}
         onError={() => {
-          if (proxyIndex < PROXIES.length - 1) {
-            setProxyIndex(proxyIndex + 1);
+          if (!useProxy) {
+            setUseProxy(true);
           } else {
-            setErrorMsg('Playback error: stream could not be decoded or is offline.');
+            setErrorMsg('Stream playback error: codec not supported or source offline.');
             setIsLoading(false);
           }
         }}
       />
 
+      {/* Loading Spinner */}
       {isLoading && !errorMsg && (
         <div style={{
           position: 'absolute',
@@ -457,11 +402,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             animation: 'spin 0.8s linear infinite'
           }} />
           <span style={{ fontSize: '13px', color: '#fff', fontWeight: 600 }}>
-            Buffering Stream ({PROXIES[proxyIndex]?.name})...
+            {useProxy ? 'Loading via HTTPS Proxy...' : 'Connecting Stream...'}
           </span>
         </div>
       )}
 
+      {/* Error State */}
       {errorMsg && (
         <div style={{
           position: 'absolute',
@@ -487,8 +433,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             <button
               onClick={() => {
                 setErrorMsg(null);
-                setProxyIndex(0);
-                loadStream(channel.url, 0);
+                setUseProxy(false);
               }}
               style={{
                 padding: '8px 16px',
@@ -507,8 +452,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             <button
               onClick={() => {
                 setErrorMsg(null);
-                const nextIdx = (proxyIndex + 1) % PROXIES.length;
-                setProxyIndex(nextIdx);
+                setUseProxy(true);
               }}
               style={{
                 padding: '8px 16px',
@@ -516,26 +460,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 background: 'var(--primary)',
                 color: '#fff',
                 fontWeight: 700,
-                fontSize: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              <Globe size={14} /> Switch Proxy
-            </button>
-            <button
-              onClick={handleNextChannel}
-              style={{
-                padding: '8px 16px',
-                borderRadius: '8px',
-                background: 'rgba(255,255,255,0.1)',
-                color: '#fff',
-                fontWeight: 600,
                 fontSize: '12px'
               }}
             >
-              Next Channel
+              Try HTTPS Proxy
             </button>
           </div>
         </div>
@@ -634,7 +562,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </div>
       </div>
 
-      {/* Bottom Bar Overlay with Left-Aligned Controls */}
+      {/* Bottom Bar Controls (Left Aligned to avoid Netlify Badge) */}
       <div style={{
         position: 'absolute',
         bottom: 0,
@@ -732,31 +660,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           >
             <Info size={15} />
             <span>Info</span>
-          </button>
-
-          {/* Proxy Mode Selector Button */}
-          <button
-            onClick={() => {
-              const nextIdx = (proxyIndex + 1) % PROXIES.length;
-              setProxyIndex(nextIdx);
-            }}
-            title="Switch Stream Route (Direct / Proxy)"
-            style={{
-              padding: '8px 12px',
-              borderRadius: '8px',
-              background: proxyIndex > 0 ? 'rgba(59, 130, 246, 0.4)' : 'rgba(255,255,255,0.12)',
-              border: proxyIndex > 0 ? '1px solid rgba(59, 130, 246, 0.8)' : 'none',
-              color: '#fff',
-              fontSize: '12px',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              flexShrink: 0
-            }}
-          >
-            <Globe size={15} />
-            <span>{PROXIES[proxyIndex].name}</span>
           </button>
 
           {/* Quality Selector */}
@@ -871,7 +774,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           position: 'absolute',
           top: '80px',
           left: '24px',
-          width: '340px',
+          width: '320px',
           background: 'rgba(15, 20, 30, 0.95)',
           backdropFilter: 'blur(16px)',
           border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -881,7 +784,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           zIndex: 60
         }}>
           <h4 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '12px', color: 'var(--glow)' }}>
-            Stream Information & Route
+            Stream Information
           </h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -889,9 +792,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               <span style={{ fontWeight: 600 }}>{channel.name}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Route Mode</span>
-              <span style={{ fontWeight: 600, color: proxyIndex > 0 ? '#60A5FA' : '#34D399' }}>
-                {PROXIES[proxyIndex]?.name}
+              <span style={{ color: 'var(--text-secondary)' }}>Route</span>
+              <span style={{ fontWeight: 600, color: useProxy ? '#60A5FA' : '#34D399' }}>
+                {useProxy ? 'HTTPS Proxy' : 'Direct'}
               </span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
