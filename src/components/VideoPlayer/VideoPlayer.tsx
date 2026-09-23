@@ -29,11 +29,16 @@ interface VideoPlayerProps {
   onToggleFavorite: (id: string) => void;
 }
 
-const PROXIES = [
-  { id: 'direct', name: 'Direct Stream', buildUrl: (u: string) => u },
-  { id: 'corsproxy', name: 'CORS Proxy (corsproxy.io)', buildUrl: (u: string) => 'https://corsproxy.io/?' + encodeURIComponent(u) },
-  { id: 'allorigins', name: 'CORS Proxy (allorigins)', buildUrl: (u: string) => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u) }
-];
+const getProxyList = () => {
+  const isNetlifyOrProd = typeof window !== 'undefined';
+  const origin = isNetlifyOrProd ? window.location.origin : '';
+  
+  return [
+    { id: 'direct', name: 'Direct Stream', buildUrl: (u: string) => u },
+    { id: 'built-in', name: 'Built-in HTTPS Proxy', buildUrl: (u: string) => origin + '/api/proxy?url=' + encodeURIComponent(u) },
+    { id: 'codetabs', name: 'Cloud Proxy Fallback', buildUrl: (u: string) => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u) }
+  ];
+};
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   channel,
@@ -78,6 +83,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const networkRecoveryCountRef = useRef(0);
 
   const isModalOpen = showDrawer || showInfo || showQualityMenu || showAudioMenu || showSubMenu || showAspectMenu;
+  const PROXIES = getProxyList();
 
   const resetControlsTimer = useCallback(() => {
     setShowControls(true);
@@ -195,7 +201,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 console.warn('Direct stream network/CORS error. Auto-trying proxy ' + (pIdx + 1) + '...');
                 setProxyIndex(pIdx + 1);
               } else {
-                setErrorMsg('Stream failed to load. The channel source may be offline, geo-blocked, or blocking CORS.');
+                setErrorMsg('Stream failed to load. The stream server may be offline or geo-restricted.');
                 setIsLoading(false);
                 hls.destroy();
               }
@@ -220,7 +226,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               if (pIdx < PROXIES.length - 1) {
                 setProxyIndex(pIdx + 1);
               } else {
-                setErrorMsg('Unable to play live stream. Check connection, proxy mode, or try another channel.');
+                setErrorMsg('Unable to play live stream. Check connection or try switching proxy route.');
                 setIsLoading(false);
                 hls.destroy();
               }
@@ -238,7 +244,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       video.play().catch(e => console.warn('Direct play notice:', e));
       setIsLoading(false);
     }
-  }, []);
+  }, [PROXIES]);
 
   useEffect(() => {
     const isHttpsOrigin = window.location.protocol === 'https:';
@@ -516,7 +522,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 gap: '6px'
               }}
             >
-              <Globe size={14} /> Try CORS Proxy
+              <Globe size={14} /> Switch Proxy
             </button>
             <button
               onClick={handleNextChannel}
@@ -734,7 +740,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               const nextIdx = (proxyIndex + 1) % PROXIES.length;
               setProxyIndex(nextIdx);
             }}
-            title="Switch Stream Route (Direct / CORS Proxy)"
+            title="Switch Stream Route (Direct / Proxy)"
             style={{
               padding: '8px 12px',
               borderRadius: '8px',
@@ -750,7 +756,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             }}
           >
             <Globe size={15} />
-            <span>{PROXIES[proxyIndex].id === 'direct' ? 'Direct' : 'Proxy'}</span>
+            <span>{PROXIES[proxyIndex].name}</span>
           </button>
 
           {/* Quality Selector */}
@@ -865,7 +871,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           position: 'absolute',
           top: '80px',
           left: '24px',
-          width: '320px',
+          width: '340px',
           background: 'rgba(15, 20, 30, 0.95)',
           backdropFilter: 'blur(16px)',
           border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -885,7 +891,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: 'var(--text-secondary)' }}>Route Mode</span>
               <span style={{ fontWeight: 600, color: proxyIndex > 0 ? '#60A5FA' : '#34D399' }}>
-                {PROXIES[proxyIndex].name}
+                {PROXIES[proxyIndex]?.name}
               </span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
