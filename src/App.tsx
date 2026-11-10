@@ -15,6 +15,7 @@ import { SettingsModal } from './components/Settings/SettingsModal';
 import { AddPlaylistModal } from './components/Playlist/AddPlaylistModal';
 import { AuthModal } from './components/Auth/AuthModal';
 import { SportsHome } from './sports/components/SportsHome';
+import { WaterBubblesBackground } from './components/Common/WaterBubblesBackground';
 
 export const App: React.FC = () => {
   const [currentNavSection, setCurrentNavSection] = useState<'IPTV' | 'SPORTS'>('IPTV');
@@ -159,7 +160,8 @@ export const App: React.FC = () => {
   });
 
   return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
+      <WaterBubblesBackground />
       {showWelcome ? (
         <WelcomeScreen
           onOpenAddPlaylist={() => setIsAddModalOpen(true)}

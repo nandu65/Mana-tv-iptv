@@ -54,21 +54,25 @@ export const SportsHome: React.FC<SportsHomeProps> = ({ onPlayStream }) => {
       flex: 1,
       height: '100%',
       overflowY: 'auto',
-      backgroundColor: 'var(--bg-main, #0a0f1d)',
-      padding: '24px 32px 60px 32px',
+      backgroundColor: 'transparent',
+      padding: '28px 36px 60px 36px',
       display: 'flex',
       flexDirection: 'column',
-      gap: '32px'
+      gap: '32px',
+      position: 'relative',
+      zIndex: 5
     }}>
       {/* Top Header & Provider Filter */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h1 style={{
-              fontSize: '28px',
+              fontSize: '32px',
               fontWeight: 800,
-              color: '#fff',
-              margin: '0 0 4px 0',
+              background: 'linear-gradient(135deg, #ffffff 30%, #93c5fd 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              margin: '0 0 6px 0',
               letterSpacing: '-0.5px'
             }}>
               Live Sports
@@ -88,15 +92,28 @@ export const SportsHome: React.FC<SportsHomeProps> = ({ onPlayStream }) => {
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              padding: '8px 16px',
-              borderRadius: '10px',
-              backgroundColor: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))',
-              color: '#e2e8f0',
+              padding: '9px 18px',
+              borderRadius: '12px',
+              background: 'rgba(255, 255, 255, 0.08)',
+              backdropFilter: 'blur(14px)',
+              WebkitBackdropFilter: 'blur(14px)',
+              border: '1px solid rgba(255, 255, 255, 0.16)',
+              boxShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.25), 0 4px 16px rgba(0, 0, 0, 0.25)',
+              color: '#f8fafc',
               fontSize: '13px',
               fontWeight: 600,
               cursor: 'pointer',
-              transition: 'background-color 0.15s ease'
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.14)';
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.28)';
+              e.currentTarget.style.transform = 'scale(1.02)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.16)';
+              e.currentTarget.style.transform = 'scale(1)';
             }}
           >
             <RefreshCw size={15} className={isLoading ? 'animate-spin' : ''} />

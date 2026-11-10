@@ -34,14 +34,18 @@ export const CategorySidebar: React.FC<CategorySidebarProps> = ({
     <aside style={{
       width: '240px',
       height: '100%',
-      backgroundColor: 'var(--bg-card)',
-      borderRight: '1px solid var(--border-subtle)',
+      background: 'var(--bg-glass-panel)',
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
+      borderRight: '1px solid var(--border-glass)',
+      boxShadow: '4px 0 24px rgba(0, 0, 0, 0.25)',
       display: 'flex',
       flexDirection: 'column',
       padding: '16px 10px',
       overflowY: 'auto',
       userSelect: 'none',
-      flexShrink: 0
+      flexShrink: 0,
+      zIndex: 10
     }}>
       {/* Primary Navigation Sections */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '16px' }}>
@@ -213,20 +217,29 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, count, isActive,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '10px 12px',
-        borderRadius: '10px',
+        padding: '10px 14px',
+        borderRadius: '12px',
         cursor: 'pointer',
-        background: isActive ? 'var(--primary)' : 'transparent',
+        background: isActive 
+          ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.8), rgba(29, 78, 216, 0.9))' 
+          : 'transparent',
+        border: isActive ? '1px solid rgba(255, 255, 255, 0.25)' : '1px solid transparent',
         color: isActive ? '#fff' : 'var(--text-primary)',
-        boxShadow: isActive ? '0 4px 14px var(--glow-shadow)' : 'none',
+        boxShadow: isActive ? '0 4px 18px rgba(59, 130, 246, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.3)' : 'none',
         fontWeight: isActive ? 700 : 500,
-        transition: 'all 0.15s ease'
+        transition: 'all 0.18s cubic-bezier(0.4, 0, 0.2, 1)'
       }}
       onMouseEnter={(e) => {
-        if (!isActive) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+        if (!isActive) {
+          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.07)';
+          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+        }
       }}
       onMouseLeave={(e) => {
-        if (!isActive) e.currentTarget.style.background = 'transparent';
+        if (!isActive) {
+          e.currentTarget.style.background = 'transparent';
+          e.currentTarget.style.borderColor = 'transparent';
+        }
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>

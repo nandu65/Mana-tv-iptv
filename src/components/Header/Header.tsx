@@ -56,8 +56,11 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header style={{
       height: '70px',
-      backgroundColor: 'var(--bg-card)',
-      borderBottom: '1px solid var(--border-subtle)',
+      background: 'var(--bg-glass-header)',
+      backdropFilter: 'blur(24px)',
+      WebkitBackdropFilter: 'blur(24px)',
+      borderBottom: '1px solid var(--border-glass)',
+      boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.3)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -70,7 +73,7 @@ export const Header: React.FC<HeaderProps> = ({
         <img
           src="/assets/app_logo.png"
           alt="Mana TV"
-          style={{ height: '36px', width: 'auto', objectFit: 'contain' }}
+          style={{ height: '38px', width: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.4))' }}
           onError={(e) => {
             (e.target as HTMLElement).style.display = 'none';
           }}
@@ -90,10 +93,13 @@ export const Header: React.FC<HeaderProps> = ({
             display: 'flex',
             alignItems: 'center',
             gap: '4px',
-            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-            padding: '3px',
-            borderRadius: '10px',
-            border: '1px solid var(--border-subtle)',
+            backgroundColor: 'rgba(255, 255, 255, 0.06)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            padding: '4px',
+            borderRadius: '12px',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
+            boxShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.2)',
             marginLeft: '14px'
           }}>
             <button
@@ -102,15 +108,16 @@ export const Header: React.FC<HeaderProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '6px 12px',
+                padding: '6px 14px',
                 borderRadius: '8px',
                 border: 'none',
-                background: currentNavSection === 'IPTV' ? 'var(--glow)' : 'transparent',
+                background: currentNavSection === 'IPTV' ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' : 'transparent',
                 color: currentNavSection === 'IPTV' ? '#fff' : 'var(--text-secondary)',
                 fontSize: '13px',
                 fontWeight: 700,
                 cursor: 'pointer',
-                transition: 'all 0.15s ease'
+                transition: 'all 0.18s ease',
+                boxShadow: currentNavSection === 'IPTV' ? '0 0 16px rgba(59, 130, 246, 0.45)' : 'none'
               }}
             >
               <Tv size={14} />
@@ -122,15 +129,16 @@ export const Header: React.FC<HeaderProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '6px 12px',
+                padding: '6px 14px',
                 borderRadius: '8px',
                 border: 'none',
-                background: currentNavSection === 'SPORTS' ? '#ef4444' : 'transparent',
+                background: currentNavSection === 'SPORTS' ? 'linear-gradient(135deg, #ef4444, #b91c1c)' : 'transparent',
                 color: currentNavSection === 'SPORTS' ? '#fff' : 'var(--text-secondary)',
                 fontSize: '13px',
                 fontWeight: 700,
                 cursor: 'pointer',
-                transition: 'all 0.15s ease'
+                transition: 'all 0.18s ease',
+                boxShadow: currentNavSection === 'SPORTS' ? '0 0 16px rgba(239, 68, 68, 0.45)' : 'none'
               }}
             >
               <Trophy size={14} />

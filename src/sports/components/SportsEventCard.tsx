@@ -54,30 +54,38 @@ export const SportsEventCard: React.FC<SportsEventCardProps> = ({
     <div
       onClick={handleCardClick}
       style={{
-        backgroundColor: 'var(--bg-card, #141c2c)',
-        borderRadius: '14px',
-        border: isLive ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))',
+        background: 'rgba(18, 27, 48, 0.62)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderRadius: '16px',
+        border: isLive ? '1px solid rgba(239, 68, 68, 0.55)' : '1px solid rgba(255, 255, 255, 0.12)',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
         cursor: isCompleted ? 'default' : 'pointer',
-        transition: 'transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease',
-        boxShadow: isLive ? '0 4px 20px rgba(239, 68, 68, 0.12)' : '0 4px 12px rgba(0, 0, 0, 0.25)',
+        transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+        boxShadow: isLive 
+          ? '0 8px 30px rgba(239, 68, 68, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.25)' 
+          : '0 8px 30px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.14)',
         userSelect: 'none'
       }}
       onMouseEnter={(e) => {
         if (!isCompleted) {
-          e.currentTarget.style.transform = 'translateY(-4px)';
-          e.currentTarget.style.borderColor = isLive ? '#ef4444' : 'var(--glow, #3b82f6)';
-          e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.4)';
+          e.currentTarget.style.transform = 'translateY(-5px) scale(1.01)';
+          e.currentTarget.style.borderColor = isLive ? '#ef4444' : 'var(--glow, #38bdf8)';
+          e.currentTarget.style.boxShadow = isLive 
+            ? '0 16px 45px rgba(239, 68, 68, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.4)' 
+            : '0 16px 45px rgba(0, 0, 0, 0.5), 0 0 25px rgba(56, 189, 248, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.3)';
         }
       }}
       onMouseLeave={(e) => {
         if (!isCompleted) {
-          e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.borderColor = isLive ? 'rgba(239, 68, 68, 0.4)' : 'var(--border-subtle, rgba(255, 255, 255, 0.08))';
-          e.currentTarget.style.boxShadow = isLive ? '0 4px 20px rgba(239, 68, 68, 0.12)' : '0 4px 12px rgba(0, 0, 0, 0.25)';
+          e.currentTarget.style.transform = 'translateY(0) scale(1)';
+          e.currentTarget.style.borderColor = isLive ? 'rgba(239, 68, 68, 0.55)' : 'rgba(255, 255, 255, 0.12)';
+          e.currentTarget.style.boxShadow = isLive 
+            ? '0 8px 30px rgba(239, 68, 68, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.25)' 
+            : '0 8px 30px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.14)';
         }
       }}
     >
@@ -282,14 +290,19 @@ export const SportsEventCard: React.FC<SportsEventCardProps> = ({
                 justifyContent: 'center',
                 gap: '7px',
                 padding: '9px 12px',
-                borderRadius: '8px',
-                backgroundColor: event.streamSupportedInApp ? '#ef4444' : '#2563eb',
+                borderRadius: '10px',
+                background: event.streamSupportedInApp 
+                  ? 'linear-gradient(135deg, #ef4444, #dc2626)' 
+                  : 'linear-gradient(135deg, #2563eb, #1d4ed8)',
                 color: '#fff',
                 fontSize: '13px',
                 fontWeight: 700,
-                border: 'none',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                boxShadow: event.streamSupportedInApp 
+                  ? '0 4px 14px rgba(239, 68, 68, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.3)' 
+                  : '0 4px 14px rgba(37, 99, 235, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.3)',
                 cursor: 'pointer',
-                transition: 'background-color 0.15s ease'
+                transition: 'all 0.18s ease'
               }}
             >
               {event.streamSupportedInApp ? (
@@ -318,14 +331,26 @@ export const SportsEventCard: React.FC<SportsEventCardProps> = ({
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '7px',
-                padding: '8px 12px',
-                borderRadius: '8px',
-                backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                color: '#94a3b8',
+                padding: '9px 12px',
+                borderRadius: '10px',
+                background: 'rgba(255, 255, 255, 0.08)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+                color: '#e2e8f0',
                 fontSize: '12px',
                 fontWeight: 600,
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                cursor: 'pointer'
+                border: '1px solid rgba(255, 255, 255, 0.14)',
+                boxShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.15)',
+                cursor: 'pointer',
+                transition: 'all 0.18s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.14)';
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.25)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.14)';
               }}
             >
               <ExternalLink size={13} />

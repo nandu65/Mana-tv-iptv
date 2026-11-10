@@ -1,9 +1,20 @@
 :root {
-  /* Default: Dark Modern + Electric Blue */
-  --bg-main: #0D0F14;
-  --bg-card: #151821;
-  --bg-card-hover: #1E2433;
-  --border-subtle: #1F2430;
+  /* Default: Deep Aquatic Glass + Electric Cyan/Blue Glow */
+  --bg-main: #060913;
+  --bg-card: rgba(18, 26, 46, 0.62);
+  --bg-card-hover: rgba(28, 41, 74, 0.78);
+  --bg-glass-panel: rgba(12, 18, 33, 0.68);
+  --bg-glass-header: rgba(10, 15, 29, 0.75);
+  
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-glass: rgba(255, 255, 255, 0.12);
+  --border-glass-glow: rgba(96, 165, 250, 0.45);
+  --border-glass-shine: inset 0 1px 1px 0 rgba(255, 255, 255, 0.22);
+  
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
+  --glass-shadow-hover: 0 14px 40px 0 rgba(0, 0, 0, 0.5), 0 0 25px rgba(59, 130, 246, 0.25);
+  --glass-blur: blur(20px);
+
   --text-primary: #F3F4F6;
   --text-secondary: #9CA3AF;
   --text-muted: #6B7280;
@@ -22,24 +33,30 @@
 
 /* Theme Classes */
 body[data-theme="DARK"] {
-  --bg-main: #0D0F14;
-  --bg-card: #151821;
-  --bg-card-hover: #1E2433;
-  --border-subtle: #1F2430;
+  --bg-main: #060913;
+  --bg-card: rgba(18, 26, 46, 0.62);
+  --bg-card-hover: rgba(28, 41, 74, 0.78);
+  --bg-glass-panel: rgba(12, 18, 33, 0.68);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-glass: rgba(255, 255, 255, 0.12);
 }
 
 body[data-theme="OLED_BLACK"] {
   --bg-main: #000000;
-  --bg-card: #0F0F11;
-  --bg-card-hover: #1A1A1E;
-  --border-subtle: #222226;
+  --bg-card: rgba(15, 17, 22, 0.72);
+  --bg-card-hover: rgba(26, 28, 36, 0.85);
+  --bg-glass-panel: rgba(8, 9, 12, 0.82);
+  --border-subtle: rgba(255, 255, 255, 0.07);
+  --border-glass: rgba(255, 255, 255, 0.12);
 }
 
 body[data-theme="BLUE"] {
-  --bg-main: #0A1124;
-  --bg-card: #111C38;
-  --bg-card-hover: #1E2E56;
-  --border-subtle: #1D2A4D;
+  --bg-main: #040816;
+  --bg-card: rgba(14, 25, 52, 0.65);
+  --bg-card-hover: rgba(23, 40, 84, 0.82);
+  --bg-glass-panel: rgba(10, 19, 41, 0.72);
+  --border-subtle: rgba(255, 255, 255, 0.1);
+  --border-glass: rgba(255, 255, 255, 0.16);
 }
 
 /* Accent Color Classes */

@@ -34,26 +34,29 @@ export const SportsChannelCard: React.FC<SportsChannelCardProps> = ({
     <div
       onClick={handleCardClick}
       style={{
-        backgroundColor: 'var(--bg-card, #141c2c)',
-        borderRadius: '12px',
-        border: '1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))',
+        background: 'rgba(18, 27, 48, 0.62)',
+        backdropFilter: 'blur(18px)',
+        WebkitBackdropFilter: 'blur(18px)',
+        borderRadius: '14px',
+        border: '1px solid rgba(255, 255, 255, 0.12)',
+        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.15)',
         padding: '14px',
         display: 'flex',
         alignItems: 'center',
         gap: '14px',
         cursor: 'pointer',
-        transition: 'transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease',
+        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
         userSelect: 'none'
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.borderColor = 'var(--glow, #3b82f6)';
-        e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.3)';
+        e.currentTarget.style.transform = 'translateY(-3px) scale(1.01)';
+        e.currentTarget.style.borderColor = 'var(--glow, #38bdf8)';
+        e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(56, 189, 248, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.3)';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.borderColor = 'var(--border-subtle, rgba(255, 255, 255, 0.08))';
-        e.currentTarget.style.boxShadow = 'none';
+        e.currentTarget.style.transform = 'translateY(0) scale(1)';
+        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.15)';
       }}
     >
       {/* Channel Logo / Initial Badge */}
