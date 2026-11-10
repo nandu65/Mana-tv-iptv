@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Star, Play, EyeOff } from 'lucide-react';
 import { Channel } from '../../models/types';
 

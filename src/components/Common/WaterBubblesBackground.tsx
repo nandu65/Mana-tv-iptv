@@ -196,3 +196,4 @@ export const WaterBubblesBackground: React.FC = () => {
     </>
   );
 };
+

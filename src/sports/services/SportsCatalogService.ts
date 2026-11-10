@@ -4,6 +4,7 @@ import { FanCodeAdapter } from '../providers/FanCodeAdapter';
 import { SonyLIVAdapter } from '../providers/SonyLIVAdapter';
 import { TataPlayAdapter } from '../providers/TataPlayAdapter';
 import { WillowAdapter } from '../providers/WillowAdapter';
+import { JioHotstarAdapter } from '../providers/JioHotstarAdapter';
 import { StorageService } from '../../services/storageService';
 
 export const PROVIDERS_META: ProviderMeta[] = [
@@ -29,6 +30,13 @@ export const PROVIDERS_META: ProviderMeta[] = [
     webUrl: 'https://www.sonyliv.com'
   },
   {
+    id: 'JIOHOTSTAR',
+    name: 'JioHotstar',
+    badgeColor: '#e11d48',
+    logoText: 'JIO',
+    webUrl: 'https://www.hotstar.com'
+  },
+  {
     id: 'TATAPLAY',
     name: 'Tata Play',
     badgeColor: '#8b5cf6',
@@ -51,6 +59,7 @@ export class SportsCatalogService {
   private static adapters: Map<string, ISportsProviderAdapter> = new Map<string, ISportsProviderAdapter>([
     ['FANCODE', new FanCodeAdapter()],
     ['SONYLIV', new SonyLIVAdapter()],
+    ['JIOHOTSTAR', new JioHotstarAdapter()],
     ['TATAPLAY', new TataPlayAdapter()],
     ['WILLOW', new WillowAdapter()]
   ]);

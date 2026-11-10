@@ -1,4 +1,4 @@
-export type SportsProvider = 'ALL' | 'FANCODE' | 'SONYLIV' | 'TATAPLAY' | 'WILLOW';
+export type SportsProvider = 'ALL' | 'FANCODE' | 'SONYLIV' | 'TATAPLAY' | 'WILLOW' | 'JIOHOTSTAR';
 
 export type SportsCategory = 'CRICKET' | 'FOOTBALL' | 'RACING' | 'TENNIS' | 'BASKETBALL' | 'COMBAT' | 'OTHER';
 
@@ -13,7 +13,7 @@ export interface TeamInfo {
 
 export interface SportsEvent {
   id: string;
-  provider: 'FANCODE' | 'SONYLIV' | 'TATAPLAY' | 'WILLOW';
+  provider: 'FANCODE' | 'SONYLIV' | 'TATAPLAY' | 'WILLOW' | 'JIOHOTSTAR';
   title: string;
   tournamentName: string;
   category: SportsCategory;
@@ -36,7 +36,7 @@ export interface SportsEvent {
 
 export interface SportsChannel {
   id: string;
-  provider: 'FANCODE' | 'SONYLIV' | 'TATAPLAY' | 'WILLOW';
+  provider: 'FANCODE' | 'SONYLIV' | 'TATAPLAY' | 'WILLOW' | 'JIOHOTSTAR';
   name: string;
   logoUrl?: string;
   category: SportsCategory;
