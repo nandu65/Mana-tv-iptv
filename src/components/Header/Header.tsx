@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Settings as SettingsIcon, Plus, ChevronDown, Check, RefreshCw, Star, Tv } from 'lucide-react';
+import { Search, Settings as SettingsIcon, Plus, ChevronDown, Check, RefreshCw, Star, Tv, Trophy } from 'lucide-react';
 import { Playlist, UserAccount } from '../../models/types';
 import { UserProfileDropdown } from '../Auth/UserProfileDropdown';
 
@@ -9,6 +9,8 @@ interface HeaderProps {
   activePlaylist: Playlist | null;
   favoritesCount: number;
   searchQuery: string;
+  currentNavSection?: 'IPTV' | 'SPORTS';
+  onSelectNavSection?: (section: 'IPTV' | 'SPORTS') => void;
   onSearchChange: (q: string) => void;
   onSelectPlaylist: (id: string) => void;
   onOpenAddPlaylist: () => void;
@@ -26,6 +28,8 @@ export const Header: React.FC<HeaderProps> = ({
   activePlaylist,
   favoritesCount,
   searchQuery,
+  currentNavSection = 'IPTV',
+  onSelectNavSection,
   onSearchChange,
   onSelectPlaylist,
   onOpenAddPlaylist,
@@ -80,7 +84,62 @@ export const Header: React.FC<HeaderProps> = ({
           </span>
         </div>
 
-        <div ref={dropdownRef} style={{ position: 'relative', marginLeft: '16px' }}>
+        {/* Navigation Section Switcher: Live TV / Live Sports */}
+        {onSelectNavSection && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            padding: '3px',
+            borderRadius: '10px',
+            border: '1px solid var(--border-subtle)',
+            marginLeft: '14px'
+          }}>
+            <button
+              onClick={() => onSelectNavSection('IPTV')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                border: 'none',
+                background: currentNavSection === 'IPTV' ? 'var(--glow)' : 'transparent',
+                color: currentNavSection === 'IPTV' ? '#fff' : 'var(--text-secondary)',
+                fontSize: '13px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Tv size={14} />
+              Live TV
+            </button>
+            <button
+              onClick={() => onSelectNavSection('SPORTS')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                border: 'none',
+                background: currentNavSection === 'SPORTS' ? '#ef4444' : 'transparent',
+                color: currentNavSection === 'SPORTS' ? '#fff' : 'var(--text-secondary)',
+                fontSize: '13px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Trophy size={14} />
+              Live Sports
+            </button>
+          </div>
+        )}
+
+        <div ref={dropdownRef} style={{ position: 'relative', marginLeft: '12px' }}>
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             style={{

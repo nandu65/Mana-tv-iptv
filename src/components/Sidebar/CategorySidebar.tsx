@@ -1,5 +1,5 @@
-﻿import React from 'react';
-import { Tv, Star, History, Folder, EyeOff } from 'lucide-react';
+import React from 'react';
+import { Tv, Star, History, Folder, EyeOff, Trophy } from 'lucide-react';
 
 interface Category {
   id: string;
@@ -13,6 +13,8 @@ interface CategorySidebarProps {
   favoritesCount: number;
   recentCount: number;
   selectedCategory: string;
+  currentNavSection?: 'IPTV' | 'SPORTS';
+  onSelectNavSection?: (section: 'IPTV' | 'SPORTS') => void;
   onSelectCategory: (id: string) => void;
   onHideCategory?: (name: string) => void;
 }
@@ -23,6 +25,8 @@ export const CategorySidebar: React.FC<CategorySidebarProps> = ({
   favoritesCount,
   recentCount,
   selectedCategory,
+  currentNavSection = 'IPTV',
+  onSelectNavSection,
   onSelectCategory,
   onHideCategory
 }) => {
@@ -41,13 +45,26 @@ export const CategorySidebar: React.FC<CategorySidebarProps> = ({
     }}>
       {/* Primary Navigation Sections */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '16px' }}>
+        {/* Live Sports Shortcut */}
+        {onSelectNavSection && (
+          <SidebarItem
+            icon={<Trophy size={18} color="#ef4444" />}
+            label="Live Sports"
+            isActive={currentNavSection === 'SPORTS'}
+            onClick={() => onSelectNavSection('SPORTS')}
+          />
+        )}
+
         {/* All Channels */}
         <SidebarItem
           icon={<Tv size={18} />}
           label="All Channels"
           count={totalChannelsCount}
-          isActive={selectedCategory === 'ALL'}
-          onClick={() => onSelectCategory('ALL')}
+          isActive={currentNavSection === 'IPTV' && selectedCategory === 'ALL'}
+          onClick={() => {
+            if (onSelectNavSection) onSelectNavSection('IPTV');
+            onSelectCategory('ALL');
+          }}
         />
 
         {/* Favorites */}
@@ -55,8 +72,11 @@ export const CategorySidebar: React.FC<CategorySidebarProps> = ({
           icon={<Star size={18} fill={selectedCategory === 'FAVORITES' ? 'var(--favorite-yellow)' : 'none'} color="var(--favorite-yellow)" />}
           label="Favorites"
           count={favoritesCount}
-          isActive={selectedCategory === 'FAVORITES'}
-          onClick={() => onSelectCategory('FAVORITES')}
+          isActive={currentNavSection === 'IPTV' && selectedCategory === 'FAVORITES'}
+          onClick={() => {
+            if (onSelectNavSection) onSelectNavSection('IPTV');
+            onSelectCategory('FAVORITES');
+          }}
         />
 
         {/* Recently Watched */}
@@ -64,8 +84,11 @@ export const CategorySidebar: React.FC<CategorySidebarProps> = ({
           icon={<History size={18} color="var(--glow)" />}
           label="Recently Watched"
           count={recentCount}
-          isActive={selectedCategory === 'RECENT'}
-          onClick={() => onSelectCategory('RECENT')}
+          isActive={currentNavSection === 'IPTV' && selectedCategory === 'RECENT'}
+          onClick={() => {
+            if (onSelectNavSection) onSelectNavSection('IPTV');
+            onSelectCategory('RECENT');
+          }}
         />
       </div>
 
@@ -177,7 +200,7 @@ export const CategorySidebar: React.FC<CategorySidebarProps> = ({
 interface SidebarItemProps {
   icon: React.ReactNode;
   label: string;
-  count: number;
+  count?: number;
   isActive: boolean;
   onClick: () => void;
 }
@@ -210,16 +233,18 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, count, isActive,
         {icon}
         <span style={{ fontSize: '14px' }}>{label}</span>
       </div>
-      <span style={{
-        fontSize: '11px',
-        fontWeight: 600,
-        padding: '2px 7px',
-        borderRadius: '10px',
-        background: isActive ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.08)',
-        color: isActive ? '#fff' : 'var(--text-secondary)'
-      }}>
-        {count}
-      </span>
+      {count !== undefined && (
+        <span style={{
+          fontSize: '11px',
+          fontWeight: 600,
+          padding: '2px 7px',
+          borderRadius: '10px',
+          background: isActive ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.08)',
+          color: isActive ? '#fff' : 'var(--text-secondary)'
+        }}>
+          {count}
+        </span>
+      )}
     </div>
   );
 };

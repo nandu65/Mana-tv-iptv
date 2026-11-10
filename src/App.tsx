@@ -14,8 +14,10 @@ import { VideoPlayer } from './components/VideoPlayer/VideoPlayer';
 import { SettingsModal } from './components/Settings/SettingsModal';
 import { AddPlaylistModal } from './components/Playlist/AddPlaylistModal';
 import { AuthModal } from './components/Auth/AuthModal';
+import { SportsHome } from './sports/components/SportsHome';
 
 export const App: React.FC = () => {
+  const [currentNavSection, setCurrentNavSection] = useState<'IPTV' | 'SPORTS'>('IPTV');
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
     const user = AuthService.getCurrentUser();
     StorageService.setScope(user ? user.id : 'guest');
@@ -174,6 +176,8 @@ export const App: React.FC = () => {
             activePlaylist={activePlaylist}
             favoritesCount={favoritesCount}
             searchQuery={searchQuery}
+            currentNavSection={currentNavSection}
+            onSelectNavSection={setCurrentNavSection}
             onSearchChange={setSearchQuery}
             onSelectPlaylist={selectPlaylist}
             onOpenAddPlaylist={() => setIsAddModalOpen(true)}
@@ -192,19 +196,40 @@ export const App: React.FC = () => {
               favoritesCount={favoritesCount}
               recentCount={recentlyWatched.length}
               selectedCategory={selectedCategory}
-              onSelectCategory={setSelectedCategory}
+              currentNavSection={currentNavSection}
+              onSelectNavSection={setCurrentNavSection}
+              onSelectCategory={(cat) => {
+                setCurrentNavSection('IPTV');
+                setSelectedCategory(cat);
+              }}
               onHideCategory={hideCategory}
             />
 
-            <ChannelGrid
-              channels={displayedChannels}
-              showLogos={preferences.showLogos}
-              onSelectChannel={handlePlayChannel}
-              onToggleFavorite={toggleFavorite}
-              onHideChannel={hideChannel}
-              onOpenAddPlaylist={() => setIsAddModalOpen(true)}
-              onLoadSample={handleLoadDefaultManaTv}
-            />
+            {currentNavSection === 'IPTV' ? (
+              <ChannelGrid
+                channels={displayedChannels}
+                showLogos={preferences.showLogos}
+                onSelectChannel={handlePlayChannel}
+                onToggleFavorite={toggleFavorite}
+                onHideChannel={hideChannel}
+                onOpenAddPlaylist={() => setIsAddModalOpen(true)}
+                onLoadSample={handleLoadDefaultManaTv}
+              />
+            ) : (
+              <SportsHome
+                onPlayStream={(streamUrl, title, logo) => {
+                  const sportsChannel: Channel = {
+                    id: `sports_${Date.now()}`,
+                    name: title,
+                    url: streamUrl,
+                    logo: logo,
+                    group: 'Live Sports',
+                    playlistId: 'sports_live'
+                  };
+                  handlePlayChannel(sportsChannel);
+                }}
+              />
+            )}
           </div>
         </>
       )}
